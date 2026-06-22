@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: order-service
+  liquibase:
+    enabled: false
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+  datasource:
+    url: jdbc:postgresql://localhost:5432/orders_db
+    username: admin
+    password: admin
