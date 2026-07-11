@@ -2,7 +2,6 @@ package com.bezrukov.orderservice.controller;
 
 import com.bezrukov.orderservice.dto.*;
 import com.bezrukov.orderservice.service.AuthService;
-import com.bezrukov.orderservice.service.UserService;
 import com.bezrukov.orderservice.utils.MapperDto;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
