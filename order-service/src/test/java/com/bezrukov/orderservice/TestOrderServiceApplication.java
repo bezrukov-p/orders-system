@@ -1,4 +1,4 @@
-package com.bezrukov.order_service;
+package com.bezrukov.orderservice;
 
 import org.springframework.boot.SpringApplication;
 

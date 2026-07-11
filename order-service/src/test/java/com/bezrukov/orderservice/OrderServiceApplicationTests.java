@@ -1,4 +1,4 @@
-package com.bezrukov.order_service;
+package com.bezrukov.orderservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
