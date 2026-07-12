@@ -3,7 +3,7 @@ spring:
     name: inventory-service
   liquibase:
     enabled: true
-    change-log: classpath:/db/changelog/db.changelog-master.yaml
+    change-log: classpath:/db/changelog/db.changelog-master-inventory.yaml
   datasource:
     url: jdbc:postgresql://localhost:5433/products_db
     username: admin
@@ -16,6 +16,12 @@ spring:
         logging:
           level:
             sql: DEBUG
+  grpc:
+    server:
+      port: 9090
+      security:
+        csrf:
+          enabled: false
 admin:
   apikey: "admin-key"
 server:

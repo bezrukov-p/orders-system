@@ -1,6 +1,6 @@
 package com.bezrukov.inventoryservice.service;
 
-import com.bezrukov.inventoryservice.dto.ProductRequest;
+import com.bezrukov.inventoryservice.dto.ProductCreateRequest;
 import com.bezrukov.inventoryservice.dto.ProductResponse;
 import com.bezrukov.inventoryservice.entity.Product;
 import org.springframework.stereotype.Component;
@@ -16,13 +16,13 @@ public class ProductMapper {
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
-                .price(product.getPrice())
+                .price(product.getPrice().doubleValue())
                 .quantity(product.getQuantity())
                 .salePercent(product.getSalePercent())
                 .build();
     }
 
-    public Product toEntity(ProductRequest request) {
+    public Product toEntity(ProductCreateRequest request) {
         if (request == null) {
             return null;
         }

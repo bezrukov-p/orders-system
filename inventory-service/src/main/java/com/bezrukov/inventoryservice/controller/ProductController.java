@@ -1,6 +1,6 @@
 package com.bezrukov.inventoryservice.controller;
 
-import com.bezrukov.inventoryservice.dto.ProductRequest;
+import com.bezrukov.inventoryservice.dto.ProductCreateRequest;
 import com.bezrukov.inventoryservice.dto.ProductResponse;
 import com.bezrukov.inventoryservice.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -52,7 +52,7 @@ public class ProductController {
     })
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct(
-            @Valid @RequestBody ProductRequest request) {
+            @Valid @RequestBody ProductCreateRequest request) {
         ProductResponse created = productService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }

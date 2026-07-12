@@ -1,6 +1,6 @@
 package com.bezrukov.inventoryservice.service;
 
-import com.bezrukov.inventoryservice.dto.ProductRequest;
+import com.bezrukov.inventoryservice.dto.ProductCreateRequest;
 import com.bezrukov.inventoryservice.dto.ProductResponse;
 import com.bezrukov.inventoryservice.entity.Product;
 import com.bezrukov.inventoryservice.exception.ProductNotFoundException;
@@ -31,12 +31,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponse create(ProductRequest productRequest) {
+    public ProductResponse create(ProductCreateRequest productCreateRequest) {
         Product product = productRepository.save(Product.builder()
-                .name(productRequest.getName())
-                .price(productRequest.getPrice())
-                .quantity(productRequest.getQuantity())
-                .salePercent(productRequest.getSalePercent())
+                .name(productCreateRequest.getName())
+                .price(productCreateRequest.getPrice())
+                .quantity(productCreateRequest.getQuantity())
+                .salePercent(productCreateRequest.getSalePercent())
                 .build());
         return productMapper.toResponse(product);
     }
@@ -44,5 +44,17 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void deleteById(Long id) {
         productRepository.deleteById(id);
+    }
+
+    @Override
+    public Product getProductWithAvailability(Long productId, Long quantity) {
+        Product product = productRepository.findById(productId).orElseThrow(
+                () -> new ProductNotFoundException("Product not found with id " + productId)
+        );
+        if (product.getQuantity() < quantity) {
+            throw new ProductNotFoundException("Quantity is too small for product with id " + productId);
+        }
+
+        return product;
     }
 }

@@ -3,7 +3,7 @@ spring:
     name: order-service
   liquibase:
     enabled: true
-    change-log: classpath:/db/changelog/db.changelog-master.yaml
+    change-log: classpath:/db/changelog/db.changelog-master-order.yaml
   datasource:
     url: jdbc:postgresql://localhost:5432/orders_db
     username: admin
@@ -16,7 +16,11 @@ spring:
         logging:
           level:
             sql: DEBUG
-
+  grpc:
+    client:
+      channel:
+        inventory-service:
+          target: "static://localhost:9090"
 logging:
   level:
     io.jsonwebtoken: DEBUG

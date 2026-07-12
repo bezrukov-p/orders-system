@@ -11,7 +11,8 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductRequest {
+public class ProductCreateRequest {
+    private Long id;
     private String name;
     private Long quantity;
     private BigDecimal price;
