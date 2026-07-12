@@ -1,6 +1,10 @@
 package com.bezrukov.orderservice.controller;
 
-import com.bezrukov.orderservice.dto.*;
+import com.bezrukov.orderservice.dto.LoginRequest;
+import com.bezrukov.orderservice.dto.LoginResponse;
+import com.bezrukov.orderservice.dto.RefreshTokenRequest;
+import com.bezrukov.orderservice.dto.RegisterRequest;
+import com.bezrukov.orderservice.dto.UserDto;
 import com.bezrukov.orderservice.service.AuthService;
 import com.bezrukov.orderservice.utils.MapperDto;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

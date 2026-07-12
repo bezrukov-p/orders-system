@@ -13,6 +13,20 @@ services:
     networks:
       - microservices-network
 
+  postgres-inventory:
+    image: postgres:18-alpine
+    container_name: postgres-inventory
+    environment:
+      POSTGRES_DB: products_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-inventory-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+
 volumes:
   postgres-order-data:
   postgres-inventory-data:

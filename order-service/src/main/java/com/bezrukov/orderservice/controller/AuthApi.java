@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "Аутентификация", description = "API для регистрации, входа и управления токенами")
@@ -27,7 +26,6 @@ public interface AuthApi {
             @ApiResponse(responseCode = "409", description = "Пользователь с таким именем или email уже существует",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PostMapping("/register")
     ResponseEntity<UserDto> register(
             @Parameter(description = "Данные для регистрации", required = true,
                     schema = @Schema(implementation = RegisterRequest.class))
@@ -46,7 +44,6 @@ public interface AuthApi {
             @ApiResponse(responseCode = "401", description = "Неверное имя пользователя или пароль",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PostMapping("/login")
     ResponseEntity<LoginResponse> login(
             @Parameter(description = "Учетные данные пользователя", required = true,
                     schema = @Schema(implementation = LoginRequest.class))
@@ -65,7 +62,6 @@ public interface AuthApi {
             @ApiResponse(responseCode = "401", description = "Refresh токен истек или недействителен",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PostMapping("/refresh")
     ResponseEntity<LoginResponse> refreshToken(
             @Parameter(description = "Refresh токен для обновления", required = true,
                     schema = @Schema(implementation = RefreshTokenRequest.class))
