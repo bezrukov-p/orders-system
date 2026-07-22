@@ -1,4 +1,4 @@
 databaseChangeLog:
   - includeAll:
-      path: db/migration/
+      path: db/inventory/migration/
       relativeToChangelogFile: false

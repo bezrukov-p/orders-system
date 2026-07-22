@@ -8,6 +8,7 @@ import com.bezrukov.orderservice.dto.UserDto;
 import com.bezrukov.orderservice.service.AuthService;
 import com.bezrukov.orderservice.utils.MapperDto;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ public class AuthController implements AuthApi {
 
     @Override
     @PostMapping("/register")
-    public ResponseEntity<UserDto> register(RegisterRequest registerRequest) {
+    public ResponseEntity<UserDto> register(@Valid RegisterRequest registerRequest) {
         log.info("Registering user: {}", registerRequest.username());
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 MapperDto.userToDto(authService.register(registerRequest))
@@ -35,14 +36,14 @@ public class AuthController implements AuthApi {
 
     @Override
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(LoginRequest loginRequest) {
+    public ResponseEntity<LoginResponse> login(@Valid LoginRequest loginRequest) {
         log.info("Login request: {}", loginRequest.username());
         return ResponseEntity.ok(authService.login(loginRequest.username(), loginRequest.password()));
     }
 
     @Override
     @PostMapping("/refreshtoken")
-    public ResponseEntity<LoginResponse> refreshToken(RefreshTokenRequest refreshTokenRequest) {
+    public ResponseEntity<LoginResponse> refreshToken(@Valid RefreshTokenRequest refreshTokenRequest) {
         log.info("Refresh token request: {}", refreshTokenRequest.refreshToken());
         return ResponseEntity.ok(authService.refreshToken(refreshTokenRequest.refreshToken()));
     }

@@ -1,6 +1,5 @@
 package com.bezrukov.inventoryservice.entity;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -11,8 +10,6 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
 
 @Entity
 @Getter
@@ -27,7 +24,6 @@ public class Product {
     private Long id;
     private String name;
     private Long quantity;
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal price;
+    private Double price;
     private Integer salePercent;
 }

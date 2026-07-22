@@ -3,31 +3,38 @@ spring:
     name: order-service
   liquibase:
     enabled: true
-    change-log: classpath:/db/changelog/db.changelog-master-order.yaml
+    change-log: classpath:/db/order/changelog/db.changelog-master-order.yaml
   datasource:
     url: jdbc:postgresql://localhost:5432/orders_db
     username: admin
     password: admin
   jpa:
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
         logging:
           level:
             sql: DEBUG
+
+server:
+  port: 8080
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
   grpc:
     client:
       channel:
         inventory-service:
           target: "static://localhost:9090"
-logging:
-  level:
-    io.jsonwebtoken: DEBUG
 
 jwt:
   access:
     secret: "paJJLVg0HrbiyQVPHCZPcf36CvDc8lekDRLDYP6NIep440LFRzzUWKScvVBspXln"
-    duration: 15m
+    duration: 1d
   refresh:
     duration: 3d

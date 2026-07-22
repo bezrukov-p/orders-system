@@ -3,13 +3,13 @@ spring:
     name: inventory-service
   liquibase:
     enabled: true
-    change-log: classpath:/db/changelog/db.changelog-master-inventory.yaml
+    change-log: classpath:/db/inventory/changelog/db.changelog-master-inventory.yaml
   datasource:
     url: jdbc:postgresql://localhost:5433/products_db
     username: admin
     password: admin
   jpa:
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true

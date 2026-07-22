@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS products
     id           BIGSERIAL PRIMARY KEY,
     name         VARCHAR(255)   NOT NULL,
     quantity     BIGINT         NOT NULL,
-    price        DECIMAL(12, 2) NOT NULL,
+    price        DOUBLE PRECISION,
     sale_percent INTEGER   DEFAULT 0,
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -3,6 +3,8 @@ package com.bezrukov.orderservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -10,10 +12,10 @@ import java.util.UUID;
 @Getter
 @Table(name = "users")
 @EqualsAndHashCode(of = "id")
-@ToString
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "orders")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,4 +30,9 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles;
+    @OneToMany(
+            mappedBy = "user",
+            fetch = FetchType.LAZY
+    )
+    private List<Order> orders = new ArrayList<>();
 }

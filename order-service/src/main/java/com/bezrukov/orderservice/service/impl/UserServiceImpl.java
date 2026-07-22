@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -80,5 +81,10 @@ public class UserServiceImpl implements UserService, ApplicationUserDetailsServi
     @Override
     public Optional<User> getUser(String username) {
         return userRepository.findByUsername(username);
+    }
+
+    @Override
+    public User getReferenceById(UUID uuid) {
+        return userRepository.getReferenceById(uuid);
     }
 }

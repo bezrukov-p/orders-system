@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS roles
 CREATE INDEX idx_roles_name ON roles (name);
 
 INSERT INTO roles (id, name)
-VALUES (gen_random_uuid(), 'ROLE_USER'),
-       (gen_random_uuid(), 'ROLE_ADMIN')
+VALUES (gen_random_uuid(), 'USER'),
+       (gen_random_uuid(), 'ADMIN')
 ON CONFLICT (name) DO NOTHING;
 
 -- rollback DELETE FROM roles WHERE name IN ('ROLE_USER', 'ROLE_ADMIN');

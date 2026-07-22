@@ -2,8 +2,10 @@ package com.bezrukov.orderservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,7 +14,16 @@ import java.util.List;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Базовый ответ с ошибкой")
+@AllArgsConstructor
+@NoArgsConstructor
 public class ErrorResponse {
+
+    public ErrorResponse(int status, String message, LocalDateTime timestamp, String errorCode) {
+        this.status = status;
+        this.message = message;
+        this.timestamp = timestamp;
+        this.errorCode = errorCode;
+    }
 
     @Schema(
             description = "HTTP статус код ошибки"
@@ -30,13 +41,6 @@ public class ErrorResponse {
             pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS"
     )
     private LocalDateTime timestamp;
-
-    @Schema(
-            description = "URL пути запроса, на котором возникла ошибка",
-            example = "/api/users",
-            requiredMode = Schema.RequiredMode.REQUIRED
-    )
-    private String path;
 
     @Schema(
             description = "Список детальных ошибок (для множественных ошибок валидации)",
