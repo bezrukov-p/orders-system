@@ -5,7 +5,7 @@ spring:
     enabled: true
     change-log: classpath:/db/order/changelog/db.changelog-master-order.yaml
   datasource:
-    url: jdbc:postgresql://localhost:5432/orders_db
+    url: jdbc:postgresql://localhost:${DB_ORDER_PORT:5432}/orders_db
     username: admin
     password: admin
   jpa:
@@ -18,10 +18,10 @@ spring:
             sql: DEBUG
 
 server:
-  port: 8080
+  port: ${ORDER_SERVICE_PORT:8080}
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: localhost:${KAFKA_PORT:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -30,7 +30,7 @@ server:
     client:
       channel:
         inventory-service:
-          target: "static://localhost:9090"
+          target: "static://localhost:${GRPC_INVENTORY_PORT:9090}"
 
 jwt:
   access:
@@ -38,3 +38,32 @@ jwt:
     duration: 1d
   refresh:
     duration: 3d
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  opentelemetry:
+    logging:
+      export:
+        otlp:
+          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/logs
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/traces
+    resource-attributes:
+      service:
+        name: order-service
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/metrics
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"
+
+#logging:
+#  level:
+#    io.opentelemetry: DEBUG
+#    org.springframework.boot.actuate: DEBUG

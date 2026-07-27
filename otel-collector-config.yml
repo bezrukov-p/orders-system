@@ -1,0 +1,46 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318  # Слушаем HTTP запросы от Spring Boot
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
+exporters:
+  # Отправляем логи в Loki по OTLP протоколу
+  otlphttp/loki:
+    endpoint: "http://loki:3100/otlp"
+
+  prometheus:
+    endpoint: "0.0.0.0:8889"  # Prometheus будет забирать метрики отсюда
+    namespace: otel
+
+  otlp/jaeger:
+    endpoint: "jaeger:4317"
+    tls:
+      insecure: true
+
+  # Для отладки — видеть логи в консоли Collector
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger]   # <-- теперь Jaeger
+    logs:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ debug, otlphttp/loki ]  # debug опционально, для проверки
+    metrics:
+      receivers: [ otlp ]
+      processors: [ memory_limiter, batch ]
+      exporters: [ prometheus ]  # <-- Важно: экспортируем в Prometheus

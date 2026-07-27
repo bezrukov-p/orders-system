@@ -5,7 +5,7 @@ spring:
     enabled: true
     change-log: classpath:/db/inventory/changelog/db.changelog-master-inventory.yaml
   datasource:
-    url: jdbc:postgresql://localhost:5433/products_db
+    url: jdbc:postgresql://localhost:${DB_INVENTORY_PORT:5433}/products_db
     username: admin
     password: admin
   jpa:
@@ -18,11 +18,36 @@ spring:
             sql: DEBUG
   grpc:
     server:
-      port: 9090
+      port: ${GRPC_INVENTORY_PORT:9090}
       security:
         csrf:
           enabled: false
 admin:
   apikey: "admin-key"
 server:
-  port: 8081
+  port: ${INVENTORY_SERVICE_PORT:8081}
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  opentelemetry:
+    logging:
+      export:
+        otlp:
+          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/logs
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/traces
+    resource-attributes:
+      service:
+        name: inventory-service
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/metrics
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"

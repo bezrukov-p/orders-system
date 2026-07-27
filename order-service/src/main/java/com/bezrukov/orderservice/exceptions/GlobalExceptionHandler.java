@@ -48,6 +48,12 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", ex.getMessage());
     }
 
+    @ExceptionHandler(UsernameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleException(UsernameAlreadyExistsException ex) {
+        log.warn(ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "USERNAME_ALREADY_EXISTS", ex.getMessage());
+    }
+
     // =============================================
     // 2. Обработка валидации @Valid
     // =============================================

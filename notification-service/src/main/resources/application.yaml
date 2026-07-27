@@ -2,7 +2,7 @@ spring:
   application:
     name: notification-service
   datasource:
-    url: jdbc:postgresql://localhost:5434/notifications_db
+    url: jdbc:postgresql://localhost:${DB_NOTIFICATION_PORT:5434}/notifications_db
     username: admin
     password: admin
     driver-class-name: org.postgresql.Driver
@@ -10,7 +10,7 @@ spring:
     change-log: classpath:/db/notification/changelog/db.changelog-master-notification.yaml
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: localhost:${KAFKA_PORT:9092}
     consumer:
       group-id: inventory-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -18,4 +18,29 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
 server:
-  port: 8082
+  port: ${NOTIFICATION_SERVICE_PORT:8082}
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  opentelemetry:
+    logging:
+      export:
+        otlp:
+          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/logs
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/traces
+    resource-attributes:
+      service:
+        name: notification-service
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/metrics
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"
