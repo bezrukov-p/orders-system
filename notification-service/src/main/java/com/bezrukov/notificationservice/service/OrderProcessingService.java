@@ -1,7 +1,7 @@
 package com.bezrukov.notificationservice.service;
 
-import event.OrderCreatedEvent;
+import com.bezrukov.common.event.OrderConfirmedEvent;
 
 public interface OrderProcessingService {
-    void processOrder(OrderCreatedEvent event);
+    void saveConfirmedOrder(OrderConfirmedEvent orderConfirmedEvent);
 }

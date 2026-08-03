@@ -1,4 +1,4 @@
-package event;
+package com.bezrukov.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,9 +11,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class OrderItemEvent {
+public class OrderItemDto {
     private Long productId;
     private Long quantity;
-    private Double price;
-    private Integer salePercent;
 }

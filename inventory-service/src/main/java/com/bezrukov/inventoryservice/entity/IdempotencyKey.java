@@ -7,25 +7,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
-@Getter
-@Setter
-@Table(name = "products")
-@EqualsAndHashCode(of = "id")
+@Data
 @Builder
+@Table(name = "idempotency_keys")
 @NoArgsConstructor
 @AllArgsConstructor
-public class Product {
+public class IdempotencyKey {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;
-    private Long quantity;
-    private Double price;
-    private Integer salePercent;
+    private String key;
 }

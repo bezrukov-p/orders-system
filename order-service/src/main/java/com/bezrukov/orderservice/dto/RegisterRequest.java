@@ -1,7 +1,9 @@
 package com.bezrukov.orderservice.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 
+@Builder
 public record RegisterRequest(
         @Schema(
                 description = "Имя пользователя для входа в систему",

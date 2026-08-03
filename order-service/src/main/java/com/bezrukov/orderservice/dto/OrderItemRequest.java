@@ -1,12 +1,16 @@
 package com.bezrukov.orderservice.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
 @Schema(description = "Запрос на создание позиции заказа")
+@Valid
+@Builder
 public class OrderItemRequest {
 
     @NotNull(message = "ID товара обязательно")

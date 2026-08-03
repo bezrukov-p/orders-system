@@ -120,7 +120,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.enable-lifecycle'  # Позволяет перезагружать конфиг без перезапуска
-      - '--storage.tsdb.retention.time=1m'
+      - '--storage.tsdb.retention.time=1d'
     networks:
       - microservices-network
     depends_on:

@@ -34,7 +34,7 @@ public class OrderController implements  OrderApi {
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody @Valid OrderRequest orderRequest) {
         OrderResponse response = orderService.createOrder(
-                orderRequest.getItems(), UUID.fromString(Objects.requireNonNull(jwt.getClaim("userId"))));
+                orderRequest, UUID.fromString(Objects.requireNonNull(jwt.getClaim("userId"))));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

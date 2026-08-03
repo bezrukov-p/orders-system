@@ -22,10 +22,22 @@ spring:
       security:
         csrf:
           enabled: false
+  kafka:
+    bootstrap-servers: localhost:${KAFKA_PORT:9092}
+    consumer:
+      group-id: inventory-service-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 admin:
   apikey: "admin-key"
 server:
   port: ${INVENTORY_SERVICE_PORT:8081}
+
 
 management:
   tracing:
@@ -51,3 +63,7 @@ management:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"
+  level:
+    org.apache.kafka: WARN
+    org.apache.kafka.clients.consumer: WARN
+    org.apache.kafka.common.config: WARN

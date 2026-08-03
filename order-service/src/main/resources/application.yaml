@@ -16,15 +16,20 @@ spring:
         logging:
           level:
             sql: DEBUG
-
-server:
-  port: ${ORDER_SERVICE_PORT:8080}
-
   kafka:
     bootstrap-servers: localhost:${KAFKA_PORT:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: order-service-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+server:
+  port: ${ORDER_SERVICE_PORT:8080}
 
   grpc:
     client:
@@ -35,9 +40,9 @@ server:
 jwt:
   access:
     secret: "paJJLVg0HrbiyQVPHCZPcf36CvDc8lekDRLDYP6NIep440LFRzzUWKScvVBspXln"
-    duration: 1d
+    duration: 100d
   refresh:
-    duration: 3d
+    duration: 300d
 management:
   tracing:
     sampling:
@@ -62,6 +67,10 @@ management:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"
+  level:
+    org.apache.kafka: WARN
+    org.apache.kafka.clients.consumer: WARN
+    org.apache.kafka.common.config: WARN
 
 #logging:
 #  level:
