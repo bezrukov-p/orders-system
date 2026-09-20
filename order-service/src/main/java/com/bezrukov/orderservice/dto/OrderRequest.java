@@ -3,14 +3,18 @@ package com.bezrukov.orderservice.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
 @Schema(description = "Запрос на создание заказа")
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class OrderRequest {
 
     @NotBlank(message = "Ключ идемпотентности обязателен")

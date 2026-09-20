@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,19 +29,31 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("OrderServiceImpl Unit Tests")
 class OrderServiceImplTest {
+
     @Mock
     private OrderRepository orderRepository;
+
     @Mock
     private OrderCommandProducer orderCommandProducer;
+
+    @Mock
+    private OutboxService outboxService;
+
     @Mock
     private UserService userService;
+
     @InjectMocks
     private OrderServiceImpl orderService;
 
@@ -79,9 +92,10 @@ class OrderServiceImplTest {
     @Nested
     @DisplayName("Успешные сценарии")
     class SuccessScenarios {
+
         @Test
-        @DisplayName("При создании заказа он должен сохраниться в БД и отправиться команда в Kafka")
-        void shouldCreateOrderAndSendCommand() {
+        @DisplayName("При создании заказа он должен сохраниться в БД и событие должно быть сохранено в Outbox")
+        void shouldCreateOrderAndSaveToOutbox() {
             Order savedOrder = Order.builder()
                     .id(UUID.randomUUID())
                     .idempotencyKey(idempotencyKey)
@@ -89,6 +103,7 @@ class OrderServiceImplTest {
                     .status(Status.PENDING)
                     .totalPrice(0.0)
                     .build();
+
             when(orderRepository.findByIdempotencyKey(idempotencyKey))
                     .thenReturn(Optional.empty());
             when(userService.getReferenceById(userId))
@@ -96,25 +111,31 @@ class OrderServiceImplTest {
             when(orderRepository.save(any(Order.class)))
                     .thenReturn(savedOrder);
 
-            OrderResponse response = orderService.createOrder(orderRequest, userId);
+            Order response = orderService.createOrder(orderRequest, userId);
 
-            assertThat(response.id()).isEqualTo(savedOrder.getId());
-            assertThat(response.status()).isEqualTo("PENDING");
-            assertThat(response.userId()).isEqualTo(userId);
-            assertThat(response.totalPrice()).isEqualTo(0.0);
+            assertThat(response.getId()).isEqualTo(savedOrder.getId());
+            assertThat(response.getStatus()).isEqualTo(Status.PENDING);
+            assertThat(response.getUser().getId()).isEqualTo(userId);
+            assertThat(response.getTotalPrice()).isEqualTo(0.0);
 
             verify(orderRepository, times(1)).save(any(Order.class));
+            verify(userService, times(1)).getReferenceById(userId);
 
-            verify(orderCommandProducer, times(1))
+            // ✅ Проверяем, что событие сохранено в Outbox, а НЕ отправлено напрямую в Kafka
+            verify(outboxService, times(1)).saveEvent(
+                    eq(savedOrder.getId()),
+                    eq("ORDER_RESERVE_COMMAND"),
+                    any(ReserveStockCommand.class),
+                    eq(idempotencyKey)
+            );
+
+            verify(orderCommandProducer, never())
                     .sendReserveStockCommand(any(ReserveStockCommand.class));
-
-            verify(userService, times(1))
-                    .getReferenceById(userId);
         }
 
         @Test
-        @DisplayName("Команда ReserveStockCommand должна содержать правильные данные")
-        void shouldSendCorrectReserveStockCommand() {
+        @DisplayName("Событие в Outbox должно содержать правильные данные")
+        void shouldSaveCorrectOutboxEvent() {
             Order savedOrder = Order.builder()
                     .id(UUID.randomUUID())
                     .idempotencyKey(idempotencyKey)
@@ -135,8 +156,12 @@ class OrderServiceImplTest {
             ArgumentCaptor<ReserveStockCommand> commandCaptor =
                     ArgumentCaptor.forClass(ReserveStockCommand.class);
 
-            verify(orderCommandProducer, times(1))
-                    .sendReserveStockCommand(commandCaptor.capture());
+            verify(outboxService, times(1)).saveEvent(
+                    eq(savedOrder.getId()),
+                    eq("ORDER_RESERVE_COMMAND"),
+                    commandCaptor.capture(),
+                    eq(idempotencyKey)
+            );
 
             ReserveStockCommand capturedCommand = commandCaptor.getValue();
 
@@ -151,6 +176,37 @@ class OrderServiceImplTest {
             OrderItemDto secondItem = capturedCommand.getItems().get(1);
             assertThat(secondItem.getProductId()).isEqualTo(2L);
             assertThat(secondItem.getQuantity()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("Сохранение в Outbox должно происходить в той же транзакции, что и сохранение заказа")
+        void shouldSaveOutboxInSameTransaction() {
+            Order savedOrder = Order.builder()
+                    .id(UUID.randomUUID())
+                    .idempotencyKey(idempotencyKey)
+                    .user(user)
+                    .status(Status.PENDING)
+                    .totalPrice(0.0)
+                    .build();
+
+            when(orderRepository.findByIdempotencyKey(idempotencyKey))
+                    .thenReturn(Optional.empty());
+            when(userService.getReferenceById(userId))
+                    .thenReturn(user);
+            when(orderRepository.save(any(Order.class)))
+                    .thenReturn(savedOrder);
+
+            orderService.createOrder(orderRequest, userId);
+
+            InOrder inOrder = inOrder(orderRepository, outboxService);
+
+            inOrder.verify(orderRepository).save(any(Order.class));
+            inOrder.verify(outboxService).saveEvent(
+                    eq(savedOrder.getId()),
+                    eq("ORDER_RESERVE_COMMAND"),
+                    any(ReserveStockCommand.class),
+                    eq(idempotencyKey)
+            );
         }
     }
 
@@ -174,15 +230,17 @@ class OrderServiceImplTest {
             when(orderRepository.findByIdempotencyKey(idempotencyKey))
                     .thenReturn(Optional.of(existingOrder));
 
-            OrderResponse response = orderService.createOrder(orderRequest, userId);
+            Order response = orderService.createOrder(orderRequest, userId);
 
-            assertThat(response.id()).isEqualTo(existingOrderId);
-            assertThat(response.status()).isEqualTo("PENDING");
+            assertThat(response.getId()).isEqualTo(existingOrderId);
+            assertThat(response.getStatus()).isEqualTo(Status.PENDING);
 
             verify(orderRepository, never()).save(any(Order.class));
+            verify(userService, never()).getReferenceById(any());
+
+            verify(outboxService, never()).saveEvent(any(), any(), any(), anyString());
             verify(orderCommandProducer, never())
                     .sendReserveStockCommand(any(ReserveStockCommand.class));
-            verify(userService, never()).getReferenceById(any());
         }
     }
 
@@ -204,41 +262,65 @@ class OrderServiceImplTest {
                     .hasMessageContaining("User not found");
 
             verify(orderRepository, never()).save(any(Order.class));
+            verify(outboxService, never()).saveEvent(any(), any(), any(), anyString());
             verify(orderCommandProducer, never())
                     .sendReserveStockCommand(any(ReserveStockCommand.class));
         }
 
         @Test
-        @DisplayName("Если orderRepository.save() выбрасывает исключение, заказ не должен отправляться в Kafka")
-        void shouldNotSendCommandWhenSaveFails() {
-/*            when(orderRepository.findByIdempotencyKey(idempotencyKey))
+        @DisplayName("Если orderRepository.save() выбрасывает исключение, событие не должно сохраняться в Outbox")
+        void shouldNotSaveOutboxWhenOrderSaveFails() {
+            when(orderRepository.findByIdempotencyKey(idempotencyKey))
                     .thenReturn(Optional.empty());
-
             when(userService.getReferenceById(userId))
-                    .thenReturn(user);*/
-
-            when(orderRepository.save(any(Order.class)));
+                    .thenReturn(user);
+            when(orderRepository.save(any(Order.class)))
+                    .thenThrow(new RuntimeException("Database error"));
 
             assertThatThrownBy(() -> orderService.createOrder(orderRequest, userId))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Database error");
 
+            verify(outboxService, never()).saveEvent(any(), any(), any(), anyString());
             verify(orderCommandProducer, never())
                     .sendReserveStockCommand(any(ReserveStockCommand.class));
         }
 
         @Test
-        @DisplayName("Если idempotencyKey null, должно быть исключение")
-        void shouldThrowExceptionWhenIdempotencyKeyIsNull() {
-            OrderRequest invalidRequest = OrderRequest.builder()
-                    .idempotencyKey(null)
-                    .items(itemsRequest)
+        @DisplayName("Если outboxService.saveEvent() выбрасывает исключение, транзакция должна откатиться")
+        void shouldRollbackTransactionWhenOutboxSaveFails() {
+            Order savedOrder = Order.builder()
+                    .id(UUID.randomUUID())
+                    .idempotencyKey(idempotencyKey)
+                    .user(user)
+                    .status(Status.PENDING)
+                    .totalPrice(0.0)
                     .build();
 
-            when(orderRepository.findByIdempotencyKey(null))
+            when(orderRepository.findByIdempotencyKey(idempotencyKey))
                     .thenReturn(Optional.empty());
+            when(userService.getReferenceById(userId))
+                    .thenReturn(user);
+            when(orderRepository.save(any(Order.class)))
+                    .thenReturn(savedOrder);
+            doThrow(new RuntimeException("Outbox save failed"))
+                    .when(outboxService).saveEvent(any(), any(), any(), anyString());
 
-            assertThatThrownBy(() -> orderService.createOrder(invalidRequest, userId))
-                    .isInstanceOf(Exception.class);
+            assertThatThrownBy(() -> orderService.createOrder(orderRequest, userId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Outbox save failed");
+
+            verify(orderRepository, times(1)).save(any(Order.class));
+
+            verify(outboxService, times(1)).saveEvent(
+                    eq(savedOrder.getId()),
+                    eq("ORDER_RESERVE_COMMAND"),
+                    any(ReserveStockCommand.class),
+                    eq(idempotencyKey)
+            );
+
+            verify(orderCommandProducer, never())
+                    .sendReserveStockCommand(any(ReserveStockCommand.class));
         }
     }
 }

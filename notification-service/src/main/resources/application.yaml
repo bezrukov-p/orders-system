@@ -16,7 +16,14 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
+        # Автоматическая инструментация консюмера
+        interceptor.classes: io.opentelemetry.instrumentation.kafkaclients.TracingConsumerInterceptor
         spring.json.trusted.packages: "*"
+    listener:
+      observation-enabled: true   # Включает наблюдение за консюмерами
+    template:
+      observation-enabled: true   # Включает наблюдение за продюсерами
+
 server:
   port: ${NOTIFICATION_SERVICE_PORT:8082}
 
@@ -48,3 +55,7 @@ logging:
     org.apache.kafka: WARN
     org.apache.kafka.clients.consumer: WARN
     org.apache.kafka.common.config: WARN
+    com.bezrukov: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+    org.springframework.kafka: WARN

@@ -27,19 +27,17 @@ import java.util.UUID;
 public class OrderServiceImpl implements OrderService {
     //private final InventoryServiceGrpc.InventoryServiceBlockingStub inventoryStub;
     private final OrderRepository orderRepository;
-    private final OrderCommandProducer orderCommandProducer;
+    private final OutboxService outboxService;
     private final UserService userService;
 
     @Override
     @Transactional
-    public OrderResponse createOrder(OrderRequest orderRequest, UUID userId) {
+    public Order createOrder(OrderRequest orderRequest, UUID userId) {
         String idempotencyKey = orderRequest.getIdempotencyKey();
-        List<OrderItemRequest> itemsRequest = orderRequest.getItems();
-
         Optional<Order> existingOrder = orderRepository.findByIdempotencyKey(idempotencyKey);
         if (existingOrder.isPresent()) {
             log.info("Idempotent request detected: returning existing order {}", existingOrder.get().getId());
-            return toOrderResponse(existingOrder.get(), userId);
+            return existingOrder.get();
         }
 
         Order order = Order.builder()
@@ -50,6 +48,7 @@ public class OrderServiceImpl implements OrderService {
                 .build();
         order = orderRepository.save(order);
 
+        List<OrderItemRequest> itemsRequest = orderRequest.getItems();
         ReserveStockCommand reserveCommand = ReserveStockCommand.builder()
                 .orderId(order.getId())
                 .idempotencyKey(order.getIdempotencyKey())
@@ -60,28 +59,16 @@ public class OrderServiceImpl implements OrderService {
                                 .build())
                         .toList())
                 .build();
-        orderCommandProducer.sendReserveStockCommand(reserveCommand);
 
-        log.info("Order created with status PENDING: orderId={}", order.getId());
-
-        return toOrderResponse(order, userId);
-    }
-
-    private OrderResponse toOrderResponse(Order order, UUID userId) {
-        return new OrderResponse(
+        outboxService.saveEvent(
                 order.getId(),
-                userId,
-                order.getStatus().name(),
-                order.getTotalPrice(),
-                order.getCreatedAt(),
-                order.getItems().stream().map(orderItem -> new OrderItemResponse(
-                        orderItem.getId(),
-                        orderItem.getProductId(),
-                        orderItem.getProductId().toString(),   //TODO сделать наименование товара
-                        orderItem.getQuantity(),
-                        orderItem.getPrice(),
-                        orderItem.getSalePercent()
-                )).toList()
+                "ORDER_RESERVE_COMMAND",
+                reserveCommand,
+                orderRequest.getIdempotencyKey()
         );
+
+        log.info("Order created and outbox message saved: orderId={}", order.getId());
+
+        return order;
     }
 }

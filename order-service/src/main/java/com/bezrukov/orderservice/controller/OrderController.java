@@ -2,7 +2,9 @@ package com.bezrukov.orderservice.controller;
 
 import com.bezrukov.orderservice.dto.OrderRequest;
 import com.bezrukov.orderservice.dto.OrderResponse;
+import com.bezrukov.orderservice.entity.Order;
 import com.bezrukov.orderservice.service.OrderService;
+import com.bezrukov.orderservice.utils.MapperDto;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -33,8 +35,9 @@ public class OrderController implements  OrderApi {
     public ResponseEntity<OrderResponse> createOrder(
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody @Valid OrderRequest orderRequest) {
-        OrderResponse response = orderService.createOrder(
-                orderRequest, UUID.fromString(Objects.requireNonNull(jwt.getClaim("userId"))));
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getClaim("userId")));
+
+        Order order = orderService.createOrder(orderRequest, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(MapperDto.toOrderResponse(order, userId));
     }
 }

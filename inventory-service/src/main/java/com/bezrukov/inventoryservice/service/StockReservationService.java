@@ -76,13 +76,21 @@ public class StockReservationService {
 
             product.setQuantity(product.getQuantity() - item.getQuantity());
 
+
+            double totalPrice = item.getQuantity() * (product.getPrice() * (100 - product.getSalePercent()));
+            //TODO убрать это логирование
+            if (totalPrice < 0) {
+                log.error("total price = {}, item.quantity = {}, product.price = {}, product.sale ={}",
+                        totalPrice, item.getQuantity(), product.getPrice(), product.getSalePercent());
+            }
+
             reservedItems.add(ReservedItemDto.builder()
                     .id(product.getId())
                     .name(product.getName())
                     .price(product.getPrice())
                     .quantity(item.getQuantity())
                     .salePercent(product.getSalePercent())
-                    .totalPrice(product.getPrice() * (1 - product.getSalePercent()))
+                    .totalPrice(totalPrice)
                     .build());
         }
 
