@@ -9,7 +9,7 @@ services:
     ports:
       - "${DB_ORDER_PORT}:5432"
     volumes:
-      - postgres-order-data:/var/lib/postgresql/data
+      - postgres-order-data:/var/lib/postgresql
     networks:
       - microservices-network
 
@@ -23,7 +23,7 @@ services:
     ports:
       - "${DB_INVENTORY_PORT}:5432"
     volumes:
-      - postgres-inventory-data:/var/lib/postgresql/data
+      - postgres-inventory-data:/var/lib/postgresql
     networks:
       - microservices-network
 
@@ -37,7 +37,7 @@ services:
     ports:
       - "${DB_NOTIFICATION_PORT}:5432"
     volumes:
-      - postgres-notification-data:/var/lib/postgresql/data
+      - postgres-notification-data:/var/lib/postgresql
     networks:
       - microservices-network
 

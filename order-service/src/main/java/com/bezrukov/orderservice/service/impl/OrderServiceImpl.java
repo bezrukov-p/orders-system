@@ -6,6 +6,8 @@ import com.bezrukov.orderservice.dto.OrderRequest;
 import com.bezrukov.orderservice.dto.OrderResponse;
 import com.bezrukov.orderservice.entity.Order;
 import com.bezrukov.orderservice.entity.Status;
+import com.bezrukov.orderservice.exceptions.OrderAccessDeniedException;
+import com.bezrukov.orderservice.exceptions.OrderNotFoundException;
 import com.bezrukov.orderservice.kafka.OrderCommandProducer;
 import com.bezrukov.orderservice.reposiroty.OrderRepository;
 import com.bezrukov.orderservice.service.OrderService;
@@ -25,7 +27,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Slf4j
 public class OrderServiceImpl implements OrderService {
-    //private final InventoryServiceGrpc.InventoryServiceBlockingStub inventoryStub;
     private final OrderRepository orderRepository;
     private final OutboxService outboxService;
     private final UserService userService;
@@ -68,6 +69,18 @@ public class OrderServiceImpl implements OrderService {
         );
 
         log.info("Order created and outbox message saved: orderId={}", order.getId());
+
+        return order;
+    }
+
+    @Override
+    public Order getOrder(UUID orderId, UUID userId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
+
+        if (!order.getUser().getId().equals(userId)) {
+            throw new OrderAccessDeniedException(orderId, userId);
+        }
 
         return order;
     }

@@ -14,10 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -39,5 +36,17 @@ public class OrderController implements  OrderApi {
 
         Order order = orderService.createOrder(orderRequest, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(MapperDto.toOrderResponse(order, userId));
+    }
+
+    @Override
+    @GetMapping("/{orderId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<OrderResponse> getOrder(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID orderId) {
+        UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getClaim("userId")));
+
+        Order order = orderService.getOrder(orderId, userId);
+        return ResponseEntity.ok(MapperDto.toOrderResponse(order, userId));
     }
 }

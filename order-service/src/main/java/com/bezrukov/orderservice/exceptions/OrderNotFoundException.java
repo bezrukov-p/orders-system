@@ -1,4 +1,9 @@
 package com.bezrukov.orderservice.exceptions;
 
-public class OrderNotFoundException extends Throwable {
+import java.util.UUID;
+
+public class OrderNotFoundException extends RuntimeException {
+    public OrderNotFoundException(UUID orderId) {
+        super("Заказ не найден: " + orderId);
+    }
 }

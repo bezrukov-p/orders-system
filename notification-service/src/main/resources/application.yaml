@@ -16,8 +16,6 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        # Автоматическая инструментация консюмера
-        interceptor.classes: io.opentelemetry.instrumentation.kafkaclients.TracingConsumerInterceptor
         spring.json.trusted.packages: "*"
     listener:
       observation-enabled: true   # Включает наблюдение за консюмерами

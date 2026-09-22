@@ -20,6 +20,8 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:8889"  # Prometheus будет забирать метрики отсюда
     namespace: otel
+    resource_to_telemetry_conversion:
+      enabled: true
 
   otlp/jaeger:
     endpoint: "jaeger:4317"
