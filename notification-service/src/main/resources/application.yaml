@@ -1,59 +1,22 @@
 spring:
   application:
     name: notification-service
-  datasource:
-    url: jdbc:postgresql://localhost:${DB_NOTIFICATION_PORT:5434}/notifications_db
-    username: admin
-    password: admin
-    driver-class-name: org.postgresql.Driver
   liquibase:
     change-log: classpath:/db/notification/changelog/db.changelog-master-notification.yaml
-
   kafka:
-    bootstrap-servers: localhost:${KAFKA_PORT:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
-      group-id: inventory-group
+      group-id: notification-service-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
     listener:
-      observation-enabled: true   # Включает наблюдение за консюмерами
-    template:
-      observation-enabled: true   # Включает наблюдение за продюсерами
+      observation-enabled: true
 
 server:
-  port: ${NOTIFICATION_SERVICE_PORT:8082}
-
-management:
-  tracing:
-    sampling:
-      probability: 1.0
-  opentelemetry:
-    logging:
-      export:
-        otlp:
-          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/logs
-    tracing:
-      export:
-        otlp:
-          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/traces
-    resource-attributes:
-      service:
-        name: notification-service
-  otlp:
-    metrics:
-      export:
-        url: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/metrics
+  port: ${SERVER_PORT:8082}
 
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"
-  level:
-    org.apache.kafka: WARN
-    org.apache.kafka.clients.consumer: WARN
-    org.apache.kafka.common.config: WARN
-    com.bezrukov: INFO
-    org.hibernate.SQL: WARN
-    org.hibernate.orm.jdbc.bind: WARN
-    org.springframework.kafka: WARN

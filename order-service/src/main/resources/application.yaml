@@ -1,23 +1,17 @@
 spring:
   application:
     name: order-service
+
   liquibase:
     enabled: true
     change-log: classpath:/db/order/changelog/db.changelog-master-order.yaml
-  datasource:
-    url: jdbc:postgresql://localhost:${DB_ORDER_PORT:5432}/orders_db
-    username: admin
-    password: admin
+
   jpa:
     show-sql: false
-    properties:
-      hibernate:
-        format_sql: false
-        logging:
-          level:
-            sql: DEBUG
+    hibernate:
+      ddl-auto: validate
+
   kafka:
-    bootstrap-servers: localhost:${KAFKA_PORT:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -28,59 +22,29 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
     listener:
-      observation-enabled: true   # Включает наблюдение за консюмерами
+      observation-enabled: true
     template:
-      observation-enabled: true   # Включает наблюдение за продюсерами
+      observation-enabled: true
 
 server:
-  port: ${ORDER_SERVICE_PORT:8080}
-
-  grpc:
-    client:
-      channel:
-        inventory-service:
-          target: "static://localhost:${GRPC_INVENTORY_PORT:9090}"
+  port: ${SERVER_PORT:8080}
 
 app:
   outbox:
     batch-size: 200
-    fixed-delay: 800 #мс
+    fixed-delay: 800
 
 jwt:
   access:
-    secret: "paJJLVg0HrbiyQVPHCZPcf36CvDc8lekDRLDYP6NIep440LFRzzUWKScvVBspXln"
+    secret: ${JWT_SECRET}
     duration: 100d
   refresh:
     duration: 300d
-management:
-  tracing:
-    sampling:
-      probability: 1.0
-  opentelemetry:
-    logging:
-      export:
-        otlp:
-          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/logs
-    tracing:
-      export:
-        otlp:
-          endpoint: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/traces
-    resource-attributes:
-      service:
-        name: order-service
-  otlp:
-    metrics:
-      export:
-        url: http://localhost:${TEMPO_OTLP_PORT:4318}/v1/metrics
 
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"
   level:
     org.apache.kafka: WARN
-    org.apache.kafka.clients.consumer: WARN
-    org.apache.kafka.common.config: WARN
     com.bezrukov: INFO
     org.hibernate.SQL: WARN
-    org.hibernate.orm.jdbc.bind: WARN
-    org.springframework.kafka: WARN

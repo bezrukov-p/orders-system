@@ -1,0 +1,108 @@
+services:
+  order-service:
+    build:
+      context: ../order-service
+      dockerfile: Dockerfile
+      args:
+        OTEL_AGENT_VERSION: ${OTEL_AGENT_VERSION}
+    container_name: order-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8080
+      DB_HOST: postgres-order
+      DB_PORT: 5432
+      DB_NAME: ${DB_ORDER_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GRPC_INVENTORY_TARGET: static://inventory-service:9090
+      JWT_SECRET: ${JWT_SECRET}
+      OTEL_SERVICE_NAME: order-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    ports:
+      - "${ORDER_SERVICE_PORT}:8080"
+    depends_on:
+      postgres-order:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - microservices-network
+
+  inventory-service:
+    build:
+      context: ../inventory-service
+      dockerfile: Dockerfile
+      args:
+        OTEL_AGENT_VERSION: ${OTEL_AGENT_VERSION}
+    container_name: inventory-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8081
+      DB_HOST: postgres-inventory
+      DB_PORT: 5432
+      DB_NAME: ${DB_INVENTORY_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GRPC_INVENTORY_PORT: 9090
+      OTEL_SERVICE_NAME: inventory-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    ports:
+      - "${INVENTORY_SERVICE_PORT}:8081"
+    depends_on:
+      postgres-inventory:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - microservices-network
+
+  notification-service:
+    build:
+      context: ../notification-service
+      dockerfile: Dockerfile
+      args:
+        OTEL_AGENT_VERSION: ${OTEL_AGENT_VERSION}
+    container_name: notification-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8082
+      DB_HOST: postgres-notification
+      DB_PORT: 5432
+      DB_NAME: ${DB_NOTIFICATION_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OTEL_SERVICE_NAME: notification-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT}:8082"
+    depends_on:
+      postgres-notification:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - microservices-network
