@@ -1,0 +1,21 @@
+# Сборка
+**/target/
+*.class
+*.jar
+
+# Иде и git
+.git/
+.idea/
+*.iml
+.vscode/
+
+# Логи
+*.log
+logs/
+
+# Инфра — не нужна в build context (иначе volumes, конфиги уедут)
+infra/
+
+# Документация
+*.md
+README.md

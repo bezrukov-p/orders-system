@@ -29,13 +29,3 @@ logging:
     com.bezrukov: DEBUG
     org.springframework.kafka: WARN
     org.hibernate.SQL: DEBUG
-
-management:
-  opentelemetry:
-    logging:
-      enabled: false
-    tracing:
-      enabled: false
-  otlp:
-    metrics:
-      enabled: false

@@ -1,7 +1,7 @@
 package com.bezrukov.inventoryservice.exception;
 
-import com.bezrukov.orderservice.dto.ErrorResponse;
-import com.bezrukov.orderservice.dto.ValidationErrorResponse;
+import com.bezrukov.inventoryservice.dto.ErrorResponse;
+import com.bezrukov.inventoryservice.dto.ValidationErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

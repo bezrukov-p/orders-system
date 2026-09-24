@@ -6,7 +6,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   kafka:
-    bootstrap-servers: localhost:${KAFKA_PORT:9092}
+    bootstrap-servers: localhost:${KAFKA_PORT:29092}
 
 logging:
   level:

@@ -1,19 +1,20 @@
-# =========================
-# Stage 1: build
-# =========================
 FROM maven:3.9-eclipse-temurin-25 AS build
 
 WORKDIR /build
 
 COPY pom.xml .
-RUN mvn -B dependency:go-offline
+COPY common/pom.xml common/pom.xml
+COPY order-service/pom.xml order-service/pom.xml
+COPY inventory-service/pom.xml inventory-service/pom.xml
+COPY notification-service/pom.xml notification-service/pom.xml
 
-COPY src ./src
-RUN mvn -B clean package -DskipTests
+RUN mvn -B -pl inventory-service -am dependency:go-offline
 
-# =========================
-# Stage 2: runtime
-# =========================
+COPY common/src common/src
+COPY inventory-service/src inventory-service/src
+
+RUN mvn -B -pl inventory-service -am clean package -DskipTests
+
 FROM eclipse-temurin:25-jre-alpine
 
 ARG OTEL_AGENT_VERSION=2.31.1
@@ -21,14 +22,13 @@ ARG OTEL_AGENT_VERSION=2.31.1
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
-COPY --from=build /build/target/*.jar app.jar
+COPY --from=build /build/inventory-service/target/*.jar app.jar
 
 ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OTEL_AGENT_VERSION}/opentelemetry-javaagent.jar /app/otel-agent.jar
 RUN chown app:app /app/otel-agent.jar
 
 USER app
-
-EXPOSE 8080
+EXPOSE 8081
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
 ENV SPRING_PROFILES_ACTIVE=docker

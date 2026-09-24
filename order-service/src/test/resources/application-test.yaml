@@ -30,18 +30,12 @@ app:
     fixed-delay: 5000
     max-retries: 3
 
+jwt:
+  access:
+    secret: "paJJLVg0HrbiyQVPHCZPcf36CvDc8lekDRLDYP6NIep440LFRzzUWKScvVBspXln"
+
 logging:
   level:
     com.bezrukov: DEBUG
     org.springframework.kafka: WARN
     org.hibernate.SQL: DEBUG
-
-management:
-  opentelemetry:
-    logging:
-      enabled: false
-    tracing:
-      enabled: false
-  otlp:
-    metrics:
-      enabled: false

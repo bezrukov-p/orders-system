@@ -6,10 +6,15 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   kafka:
-    bootstrap-servers: localhost:${KAFKA_PORT:9092}
+    bootstrap-servers: localhost:${KAFKA_PORT:29092}
+
+jwt:
+  access:
+    secret: "paJJLVg0HrbiyQVPHCZPcf36CvDc8lekDRLDYP6NIep440LFRzzUWKScvVBspXln"
 
 logging:
   level:
-    com.bezrukov: DEBUG
-    org.hibernate.SQL: DEBUG
+    com.bezrukov: WARN
+    org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: TRACE
+    org.springframework.cache: TRACE

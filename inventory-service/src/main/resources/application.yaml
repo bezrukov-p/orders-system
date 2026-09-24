@@ -10,6 +10,14 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: inventory-service-group
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      max-poll-records: 500                    # max-poll-records × avg_processing_time < max-poll-interval-ms
+      max-poll-interval-ms: 300000             # 5 мин — макс время обработки
+      session-timeout-ms: 10000
+      heartbeat-interval-ms: 3000
+      fetch-min-size: 1
+      fetch-max-wait: 500
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
@@ -17,6 +25,15 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      compression-type: lz4
+      batch-size: 16384          # 16 КБ
+      linger-ms: 5               # 0–5 мс
+      buffer-memory: 33554432    # 32 МБ
+      max-in-flight-requests-per-connection: 5
+    listener:
+      concurrency: 5
 
 server:
   port: ${SERVER_PORT:8081}
@@ -27,3 +44,10 @@ admin:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        #include: health, info, metrics, prometheus, env, loggers, caches, scheduledtasks
+        include: "*"
