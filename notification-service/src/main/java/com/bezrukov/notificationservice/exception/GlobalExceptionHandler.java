@@ -1,6 +1,5 @@
 package com.bezrukov.notificationservice.exception;
 
-
 import com.bezrukov.notificationservice.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

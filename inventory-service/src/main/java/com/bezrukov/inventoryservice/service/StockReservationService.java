@@ -9,7 +9,6 @@ import com.bezrukov.inventoryservice.entity.IdempotencyKey;
 import com.bezrukov.inventoryservice.entity.Product;
 import com.bezrukov.inventoryservice.exception.InsufficientStockException;
 import com.bezrukov.inventoryservice.exception.ProductNotFoundException;
-import com.bezrukov.inventoryservice.kafka.InventoryEventProducer;
 import com.bezrukov.inventoryservice.repository.IdempotencyKeyRepository;
 import com.bezrukov.inventoryservice.repository.ProductRepository;
 import jakarta.transaction.Transactional;
@@ -76,13 +75,7 @@ public class StockReservationService {
 
             product.setQuantity(product.getQuantity() - item.getQuantity());
 
-
-            double totalPrice = item.getQuantity() * (product.getPrice() * (100 - product.getSalePercent()));
-            //TODO убрать это логирование
-            if (totalPrice < 0) {
-                log.error("total price = {}, item.quantity = {}, product.price = {}, product.sale ={}",
-                        totalPrice, item.getQuantity(), product.getPrice(), product.getSalePercent());
-            }
+            double totalPrice = item.getQuantity() * (product.getPrice() * ((100 - product.getSalePercent()) /100.0));
 
             reservedItems.add(ReservedItemDto.builder()
                     .id(product.getId())

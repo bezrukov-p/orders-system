@@ -78,7 +78,7 @@ class OutboxSchedulerIntegrationTest {
                     assertThat(saved.getProcessedAt()).isNotNull();
                 });
 
-        long pendingCount = outboxRepository.countByProcessedFalse();
+        long pendingCount = outboxRepository.countByProcessedFalseAndFailedFalse();
         assertThat(pendingCount).isZero();
     }
 
@@ -117,7 +117,7 @@ class OutboxSchedulerIntegrationTest {
 
         await().atMost(5, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
-                    long pendingCount = outboxRepository.countByProcessedFalse();
+                    long pendingCount = outboxRepository.countByProcessedFalseAndFailedFalse();
                     assertThat(pendingCount).isZero();
                 });
 
@@ -190,7 +190,7 @@ class OutboxSchedulerIntegrationTest {
 
         await().atMost(5, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
-                    long pendingCount = outboxRepository.countByProcessedFalse();
+                    long pendingCount = outboxRepository.countByProcessedFalseAndFailedFalse();
                     assertThat(pendingCount).isZero();
                 });
     }

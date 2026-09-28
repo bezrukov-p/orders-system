@@ -10,9 +10,6 @@ CREATE TABLE IF NOT EXISTS users
     email VARCHAR(100) UNIQUE
 );
 
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
-
 -- rollback DROP INDEX IF EXISTS idx_users_email;
 -- rollback DROP INDEX IF EXISTS idx_users_username;
 -- rollback DROP TABLE IF EXISTS users;

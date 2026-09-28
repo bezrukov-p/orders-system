@@ -1,6 +1,8 @@
 package com.bezrukov.notificationservice.controller;
 
 import com.bezrukov.notificationservice.dto.OrderResponse;
+import com.bezrukov.notificationservice.entity.Order;
+import com.bezrukov.notificationservice.service.OrderMapper;
 import com.bezrukov.notificationservice.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,6 +28,7 @@ import java.util.UUID;
 public class OrderAnalyticsController {
 
     private final OrderService orderService;
+    private final OrderMapper orderMapper;
 
     @GetMapping("/all")
     @Operation(
@@ -34,7 +37,7 @@ public class OrderAnalyticsController {
     )
     @ApiResponse(responseCode = "200", description = "Список заказов успешно получен")
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        List<OrderResponse> orders = orderService.getAllOrders();
+        List<OrderResponse> orders = orderService.getAllOrders().stream().map(orderMapper::toResponse).toList();
         return ResponseEntity.ok(orders);
     }
 
@@ -51,8 +54,8 @@ public class OrderAnalyticsController {
             @Parameter(description = "ID заказа из Order Service", required = true)
             @PathVariable UUID orderId
     ) {
-        OrderResponse order = orderService.getOrderByOrderId(orderId);
-        return ResponseEntity.ok(order);
+        Order order = orderService.getOrderByOrderId(orderId);
+        return ResponseEntity.ok(orderMapper.toResponse(order));
     }
 
     @GetMapping("/user/{userId}")
@@ -65,7 +68,7 @@ public class OrderAnalyticsController {
             @Parameter(description = "ID пользователя", required = true)
             @PathVariable UUID userId
     ) {
-        List<OrderResponse> orders = orderService.getOrdersByUserId(userId);
-        return ResponseEntity.ok(orders);
+        List<Order> orders = orderService.getOrdersByUserId(userId);
+        return ResponseEntity.ok(orders.stream().map(orderMapper::toResponse).toList());
     }
 }

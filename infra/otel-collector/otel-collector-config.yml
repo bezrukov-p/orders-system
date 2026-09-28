@@ -7,19 +7,16 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 processors:
-  # Защита от OOM коллектора
   memory_limiter:
     check_interval: 1s
     limit_mib: 512
     spike_limit_mib: 128
 
-  # Батчинг — снижает количество запросов к экспортёрам
   batch:
     timeout: 5s
     send_batch_size: 1024
     send_batch_max_size: 2048
 
-  # (Опционально) Единый набор resource-атрибутов для всех сигналов
   resource:
     attributes:
       - key: deployment.environment
@@ -27,13 +24,11 @@ processors:
         action: upsert
 
 exporters:
-  # Логи → Loki по OTLP HTTP
   otlphttp/loki:
     endpoint: "http://loki:3100/otlp"
     tls:
       insecure: true
 
-  # Метрики → Prometheus (pull через :8889)
   prometheus:
     endpoint: "0.0.0.0:8889"
     namespace: otel
@@ -41,13 +36,11 @@ exporters:
       enabled: true
     enable_open_metrics: true
 
-  # Трейсы → Jaeger по OTLP gRPC
   otlp/jaeger:
     endpoint: "jaeger:4317"
     tls:
       insecure: true
 
-  # Debug — только для отладки, ОТКЛЮЧИ в обычной работе
   # debug:
   #   verbosity: basic
 
@@ -62,7 +55,7 @@ service:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
       exporters: [otlphttp/loki]
-      # для отладки добавь debug: exporters: [debug, otlphttp/loki]
+      #exporters: [debug, otlphttp/loki]
 
     metrics:
       receivers: [otlp]

@@ -13,6 +13,15 @@ CREATE TABLE IF NOT EXISTS order_items
     sale_percent INTEGER   DEFAULT 0,
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+
+
     CONSTRAINT fk_order_items_order FOREIGN KEY (order_id)
         REFERENCES orders (id) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_notif_order_items_order_id ON order_items (order_id);
+CREATE INDEX idx_notif_order_items_product_id ON order_items (product_id);
+
+-- rollback DROP INDEX IF EXISTS idx_notif_order_items_product_id;
+-- rollback DROP INDEX IF EXISTS idx_notif_order_items_order_id;
+-- rollback DROP TABLE IF EXISTS order_items;

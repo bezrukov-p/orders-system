@@ -22,7 +22,7 @@ public class InventoryEventConsumer {
             orderStatusUpdateService.handleStockReservedEvent(event);
         } catch (Exception e) {
             log.error("Failed to handle StockReservedEvent: orderId={}", event.getOrderId(), e);
-            throw e;  // ← пробрасываем для retry
+            throw e;
         }
     }
 }

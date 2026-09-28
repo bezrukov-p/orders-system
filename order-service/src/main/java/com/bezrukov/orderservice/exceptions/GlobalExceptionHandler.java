@@ -20,10 +20,6 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // =============================================
-    // 1. Обработка кастомных бизнес-исключений
-    // =============================================
-
     @ExceptionHandler(ProductNotAvailableException.class)
     public ResponseEntity<ErrorResponse> handleProductNotAvailable(ProductNotAvailableException ex) {
         log.warn("Product not available: {}", ex.getMessage());
@@ -60,10 +56,6 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "USERNAME_ALREADY_EXISTS", ex.getMessage());
     }
 
-    // =============================================
-    // 2. Обработка валидации @Valid
-    // =============================================
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ValidationErrorResponse> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
@@ -84,10 +76,6 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    // =============================================
-    // 3. Обработка ошибок доступа (Security)
-    // =============================================
-
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         log.warn("Access denied: {}", ex.getMessage());
@@ -100,18 +88,10 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid credentials");
     }
 
-    // =============================================
-    // 4. Обработка ошибок HTTP (например, 404)
-    // =============================================
-
     @ExceptionHandler(org.springframework.web.servlet.NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(NoHandlerFoundException ex) {
         return buildErrorResponse(HttpStatus.NOT_FOUND, "ENDPOINT_NOT_FOUND", "The requested endpoint does not exist");
     }
-
-    // =============================================
-    // 5. Обработка всех остальных исключений (fallback)
-    // =============================================
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
@@ -122,10 +102,6 @@ public class GlobalExceptionHandler {
                 "An unexpected error occurred. Please try again later."
         );
     }
-
-    // =============================================
-    // Вспомогательные методы
-    // =============================================
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(
             HttpStatus status,

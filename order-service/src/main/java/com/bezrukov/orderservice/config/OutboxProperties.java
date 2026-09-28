@@ -10,4 +10,5 @@ import org.springframework.stereotype.Component;
 public class OutboxProperties {
     private int batchSize;
     private long fixedDelay;
+    private int maxRetries;
 }

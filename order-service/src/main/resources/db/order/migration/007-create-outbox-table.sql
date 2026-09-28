@@ -14,3 +14,7 @@ CREATE TABLE IF NOT EXISTS outbox_messages
     processed_at    TIMESTAMP,
     retry_count     INT              DEFAULT 0
 );
+
+CREATE INDEX idx_outbox_messages_unprocessed
+    ON outbox_messages (created_at)
+    WHERE processed = false;

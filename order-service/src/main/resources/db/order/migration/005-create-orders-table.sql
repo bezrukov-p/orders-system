@@ -15,4 +15,7 @@ CREATE TABLE IF NOT EXISTS orders
         REFERENCES users (id) ON DELETE CASCADE
 );
 
+CREATE INDEX idx_orders_user_id ON orders (user_id);
+CREATE INDEX idx_orders_status ON orders (status) WHERE status != 'COMPLETED';
+
 -- rollback DROP TABLE IF EXISTS orders;

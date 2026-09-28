@@ -30,7 +30,7 @@ public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;  // локальный ID (для аналитики)
+    private Long id;  // локальный ID
 
     @Column(name = "order_id", nullable = false, unique = true)
     private UUID orderId;  // ID заказа из Order Service

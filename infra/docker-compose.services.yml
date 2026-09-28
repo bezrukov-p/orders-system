@@ -104,3 +104,6 @@ services:
         condition: service_started
     networks:
       - microservices-network
+networks:
+  microservices-network:
+    name: microservices-network

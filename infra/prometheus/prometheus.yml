@@ -11,3 +11,10 @@ scrape_configs:
     scrape_interval: 10s
     static_configs:
       - targets: ['otel-collector:8889']
+
+  - job_name: 'order-service-actuator'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'order-service:8080' ]
+        labels:
+          service_name: order-service

@@ -2,6 +2,8 @@ package com.bezrukov.inventoryservice.controller;
 
 import com.bezrukov.inventoryservice.dto.ProductCreateRequest;
 import com.bezrukov.inventoryservice.dto.ProductResponse;
+import com.bezrukov.inventoryservice.entity.Product;
+import com.bezrukov.inventoryservice.service.ProductMapper;
 import com.bezrukov.inventoryservice.service.ProductService;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
@@ -24,23 +26,24 @@ import java.util.List;
 public class ProductController implements ProductApi{
 
     private final ProductService productService;
+    private final ProductMapper productMapper;
 
     @GetMapping
     public ResponseEntity<List<ProductResponse>> findAll() {
-        return ResponseEntity.ok(productService.findAll());
+        return ResponseEntity.ok(productService.findAll().stream().map(productMapper::toResponse).toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> findById(
             @Parameter(description = "ID товара") @PathVariable Long id) {
-        return ResponseEntity.ok(productService.findById(id));
+        return ResponseEntity.ok(productMapper.toResponse(productService.findById(id)));
     }
 
     @PostMapping
     public ResponseEntity<ProductResponse> create(
             @Valid @RequestBody ProductCreateRequest request) {
-        ProductResponse created = productService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        Product created = productService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(productMapper.toResponse(created));
     }
 
     @DeleteMapping("/{id}")

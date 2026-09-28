@@ -56,6 +56,9 @@ app:
   outbox:
     batch-size: 200
     fixed-delay: 800
+    max-retries: 3
+    retry-delay-ms: 60000
+    retention-days: 7
 
 jwt:
   access:
@@ -75,5 +78,11 @@ management:
   endpoints:
     web:
       exposure:
-        #include: health, info, metrics, prometheus, env, loggers, caches, scheduledtasks
-        include: "*"
+        include: health, info, metrics, prometheus
+        #include: "*"
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name} # TODO удалить в общём yml

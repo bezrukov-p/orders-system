@@ -10,6 +10,6 @@ import java.util.UUID;
 
 @Repository
 public interface OutboxRepository extends JpaRepository<OutboxMessage, UUID> {
-    List<OutboxMessage> findByProcessedFalseOrderByCreatedAtAsc(Limit limit);
-    long countByProcessedFalse();
+    long countByProcessedFalseAndFailedFalse();
+    List<OutboxMessage> findByProcessedFalseAndFailedFalseOrderByCreatedAtAsc(Limit limit);
 }

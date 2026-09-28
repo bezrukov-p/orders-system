@@ -26,10 +26,10 @@ const usersRegistered = new Counter('users_registered');
 export const options = {
     stages: [
         { duration: '30s', target: 10 },
-        { duration: '2m',  target: 50 },
+        //{ duration: '1m',  target: 50 },
         //{ duration: '1m',  target: 100 },
-        //{ duration: '1m',  target: 200 },
-        //{ duration: '1m',  target: 300 },
+        { duration: '1m',  target: 200 },
+        { duration: '1m',  target: 300 },
         //{ duration: '1m',  target: 400 },
         //{ duration: '1m',  target: 500 },
         { duration: '30s', target: 0 },     // ramp-down

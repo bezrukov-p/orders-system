@@ -15,5 +15,10 @@ CREATE TABLE IF NOT EXISTS orders
     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Индексы для типичных запросов
+CREATE INDEX idx_notif_orders_user_id ON orders (user_id);
+CREATE INDEX idx_notif_orders_created_at ON orders (created_at DESC);
 
+-- rollback DROP INDEX IF EXISTS idx_notif_orders_created_at;
+-- rollback DROP INDEX IF EXISTS idx_notif_orders_user_id;
 -- rollback DROP TABLE IF EXISTS orders;
