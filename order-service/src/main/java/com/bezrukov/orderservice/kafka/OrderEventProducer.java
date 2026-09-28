@@ -25,6 +25,7 @@ public class OrderEventProducer {
                 .items(order.getItems().stream() //TODO маппер общий сделать
                         .map(item -> OrderItemEvent.builder()
                                 .productId(item.getProductId())
+                                .name(item.getName())
                                 .quantity(item.getQuantity())
                                 .price(item.getPrice())
                                 .salePercent(item.getSalePercent())

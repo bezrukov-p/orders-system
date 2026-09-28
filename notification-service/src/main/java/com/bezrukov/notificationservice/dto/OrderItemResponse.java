@@ -11,6 +11,9 @@ public record OrderItemResponse(
         @Schema(description = "ID товара", example = "1")
         Long productId,
 
+        @Schema(description = "Наименование товара", example = "MacBook")
+        String name,
+
         @Schema(description = "Количество товара", example = "2")
         Long quantity,
 

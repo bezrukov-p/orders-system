@@ -13,6 +13,7 @@ import lombok.ToString;
 @ToString
 public class OrderItemEvent {
     private Long productId;
+    private String name;
     private Long quantity;
     private Double price;
     private Integer salePercent;

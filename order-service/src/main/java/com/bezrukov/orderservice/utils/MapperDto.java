@@ -29,7 +29,7 @@ public class MapperDto {
                 order.getItems().stream().map(orderItem -> new OrderItemResponse(
                         orderItem.getId(),
                         orderItem.getProductId(),
-                        orderItem.getProductId().toString(),   //TODO сделать наименование товара
+                        orderItem.getName(),
                         orderItem.getQuantity(),
                         orderItem.getPrice(),
                         orderItem.getSalePercent()

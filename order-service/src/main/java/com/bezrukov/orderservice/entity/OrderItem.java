@@ -34,6 +34,7 @@ public class OrderItem {
     private Order order;
     private Long productId;
     private Long quantity;
+    private String name;
     private Double price;
     private Integer salePercent;
 }

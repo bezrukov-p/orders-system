@@ -33,6 +33,7 @@ public class OrderMapper {
         return new OrderItemResponse(
                 item.getId(),
                 item.getProductId(),
+                item.getName(),
                 item.getQuantity(),
                 item.getPrice(),
                 item.getSalePercent()

@@ -33,6 +33,9 @@ public class OrderItem {
     @Column(name = "product_id", nullable = false)
     private Long productId;
 
+    @Column(name = "name")
+    private String name;
+
     @Column(name = "quantity", nullable = false)
     private Long quantity;
 

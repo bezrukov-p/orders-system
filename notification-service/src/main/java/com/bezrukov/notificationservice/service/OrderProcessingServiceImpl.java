@@ -36,6 +36,7 @@ public class OrderProcessingServiceImpl implements OrderProcessingService {
                 .map(item -> OrderItem.builder()
                         .order(order)
                         .productId(item.getProductId())
+                        .name(item.getName())
                         .quantity(item.getQuantity())
                         .price(item.getPrice())
                         .salePercent(item.getSalePercent())

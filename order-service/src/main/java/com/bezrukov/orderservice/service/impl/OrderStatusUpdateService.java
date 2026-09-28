@@ -49,6 +49,7 @@ public class OrderStatusUpdateService {
                     item -> OrderItem.builder()
                             .order(order)
                             .productId(item.getId())
+                            .name(item.getName())
                             .price(item.getPrice())
                             .salePercent(item.getSalePercent())
                             .quantity(item.getQuantity())
