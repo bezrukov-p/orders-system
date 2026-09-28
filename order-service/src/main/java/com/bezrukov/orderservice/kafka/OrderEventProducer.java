@@ -20,9 +20,9 @@ public class OrderEventProducer {
     public void sendOrderConfirmedEvent(Order order) {
         OrderConfirmedEvent event = OrderConfirmedEvent.builder()
                 .orderId(order.getId())
-                .userId(order.getUser().getId()) //TODO user? или userid передавать в параметре
+                .userId(order.getUser().getId())
                 .userEmail(order.getUser().getEmail())
-                .items(order.getItems().stream() //TODO маппер общий сделать
+                .items(order.getItems().stream()
                         .map(item -> OrderItemEvent.builder()
                                 .productId(item.getProductId())
                                 .name(item.getName())

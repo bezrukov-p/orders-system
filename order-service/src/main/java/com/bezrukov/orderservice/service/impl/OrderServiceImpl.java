@@ -43,7 +43,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = Order.builder()
                 .idempotencyKey(idempotencyKey)
                 .user(userService.getReferenceById(userId))
-                .status(Status.PENDING)  //TODO чем заполнять .items
+                .status(Status.PENDING)
                 .totalPrice(0.0)
                 .build();
         order = orderRepository.save(order);
