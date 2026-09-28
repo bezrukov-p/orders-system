@@ -5,19 +5,21 @@ import com.bezrukov.common.event.ReserveStockCommand;
 import com.bezrukov.orderservice.entity.OutboxMessage;
 import com.bezrukov.orderservice.reposiroty.OutboxRepository;
 import com.bezrukov.orderservice.service.impl.OutboxScheduler;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -26,11 +28,13 @@ import static org.awaitility.Awaitility.await;
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
 class OutboxSchedulerIntegrationTest {
-    @Autowired
-    private OutboxRepository outboxRepository;
+
+    private static final String EVENT_TYPE_RESERVE_STOCK = "ORDER_RESERVE_COMMAND";
+    private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration AWAIT_POLL = Duration.ofMillis(100);
 
     @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private OutboxRepository outboxRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -38,91 +42,49 @@ class OutboxSchedulerIntegrationTest {
     @Autowired
     private OutboxScheduler outboxScheduler;
 
+    @AfterEach
+    void tearDown() {
+        outboxRepository.deleteAll();
+    }
+
     @Test
     @DisplayName("Базовая отправка сообщений")
     void shouldPublishPendingMessagesToKafka() throws Exception {
-        UUID orderId = UUID.randomUUID();
-        UUID idempotencyKey = UUID.randomUUID();
-
-        ReserveStockCommand command = ReserveStockCommand.builder()
-                .orderId(orderId)
-                .idempotencyKey(idempotencyKey.toString())
-                .items(List.of(
-                        OrderItemDto.builder()
-                                .productId(1L)
-                                .quantity(2L)
-                                .build()
-                ))
-                .build();
-
-        String payload = objectMapper.writeValueAsString(command);
-
-        OutboxMessage message = OutboxMessage.builder()
-                .aggregateId(orderId)
-                .eventType("ORDER_RESERVE_COMMAND")
-                .payload(payload)
-                .idempotencyKey(idempotencyKey.toString())
-                .createdAt(LocalDateTime.now())
-                .processed(false)
-                .retryCount(0)
-                .build();
-
-        outboxRepository.save(message);
+        OutboxMessage message = savePendingOutboxMessage(1L, 2L, LocalDateTime.now());
 
         outboxScheduler.publishPendingMessages();
 
-        await().atMost(5, TimeUnit.SECONDS)
+        await().atMost(AWAIT_TIMEOUT)
+                .pollInterval(AWAIT_POLL)
+                .ignoreException(NoSuchElementException.class)
                 .untilAsserted(() -> {
                     OutboxMessage saved = outboxRepository.findById(message.getId()).orElseThrow();
                     assertThat(saved.isProcessed()).isTrue();
                     assertThat(saved.getProcessedAt()).isNotNull();
                 });
 
-        long pendingCount = outboxRepository.countByProcessedFalseAndFailedFalse();
-        assertThat(pendingCount).isZero();
+        assertThat(outboxRepository.countByProcessedFalseAndFailedFalse()).isZero();
     }
 
     @Test
     @DisplayName("Обработка нескольких сообщений")
     void shouldProcessMultipleMessagesInBatch() throws Exception {
-        for (int i = 0; i < 5; i++) {
-            UUID orderId = UUID.randomUUID();
-            ReserveStockCommand command = ReserveStockCommand.builder()
-                    .orderId(orderId)
-                    .idempotencyKey(UUID.randomUUID().toString())
-                    .items(List.of(
-                            OrderItemDto.builder()
-                                    .productId((long) i)
-                                    .quantity(1L)
-                                    .build()
-                    ))
-                    .build();
-
-            String payload = objectMapper.writeValueAsString(command);
-
-            OutboxMessage message = OutboxMessage.builder()
-                    .aggregateId(orderId)
-                    .eventType("ORDER_RESERVE_COMMAND")
-                    .payload(payload)
-                    .idempotencyKey(UUID.randomUUID().toString())
-                    .createdAt(LocalDateTime.now())
-                    .processed(false)
-                    .retryCount(0)
-                    .build();
-
-            outboxRepository.save(message);
+        int messagesCount = 5;
+        for (int i = 0; i < messagesCount; i++) {
+            savePendingOutboxMessage((long) i, 1L, LocalDateTime.now());
         }
 
         outboxScheduler.publishPendingMessages();
 
-        await().atMost(5, TimeUnit.SECONDS)
-                .untilAsserted(() -> {
-                    long pendingCount = outboxRepository.countByProcessedFalseAndFailedFalse();
-                    assertThat(pendingCount).isZero();
-                });
+        await().atMost(AWAIT_TIMEOUT)
+                .pollInterval(AWAIT_POLL)
+                .untilAsserted(() ->
+                        assertThat(outboxRepository.countByProcessedFalseAndFailedFalse()).isZero()
+                );
 
         List<OutboxMessage> allMessages = outboxRepository.findAll();
         assertThat(allMessages)
+                .hasSize(messagesCount)
                 .allMatch(OutboxMessage::isProcessed)
                 .allMatch(msg -> msg.getProcessedAt() != null);
     }
@@ -130,22 +92,22 @@ class OutboxSchedulerIntegrationTest {
     @Test
     @DisplayName("Игнорирование уже обработанных сообщений")
     void shouldIgnoreAlreadyProcessedMessages(){
-        OutboxMessage processedMessage = OutboxMessage.builder()
+        OutboxMessage processedMessage = outboxRepository.save(OutboxMessage.builder()
                 .aggregateId(UUID.randomUUID())
-                .eventType("ORDER_RESERVE_COMMAND")
+                .eventType(EVENT_TYPE_RESERVE_STOCK)
                 .payload("{}")
                 .idempotencyKey(UUID.randomUUID().toString())
                 .createdAt(LocalDateTime.now())
                 .processed(true)
                 .processedAt(LocalDateTime.now())
                 .retryCount(0)
-                .build();
-
-        outboxRepository.save(processedMessage);
+                .build());
 
         outboxScheduler.publishPendingMessages();
 
-        await().atMost(3, TimeUnit.SECONDS)
+        await().atMost(AWAIT_TIMEOUT)
+                .pollInterval(AWAIT_POLL)
+                .ignoreException(NoSuchElementException.class)
                 .untilAsserted(() -> {
                     OutboxMessage saved = outboxRepository.findById(processedMessage.getId()).orElseThrow();
                     assertThat(saved.isProcessed()).isTrue();
@@ -153,45 +115,32 @@ class OutboxSchedulerIntegrationTest {
                 });
     }
 
-    @Test
-    @DisplayName("Порядок обработки событий")
-    void shouldProcessMessagesInFifoOrder() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
+    private OutboxMessage savePendingOutboxMessage(long productId, long quantity, LocalDateTime createdAt)
+            throws JsonProcessingException {
 
-        for (int i = 0; i < 5; i++) {
-            UUID orderId = UUID.randomUUID();
-            ReserveStockCommand command = ReserveStockCommand.builder()
-                    .orderId(orderId)
-                    .idempotencyKey(UUID.randomUUID().toString())
-                    .items(List.of(
-                            OrderItemDto.builder()
-                                    .productId((long) i)
-                                    .quantity(1L)
-                                    .build()
-                    ))
-                    .build();
+        UUID orderId = UUID.randomUUID();
 
-            String payload = objectMapper.writeValueAsString(command);
+        ReserveStockCommand command = ReserveStockCommand.builder()
+                .orderId(orderId)
+                .idempotencyKey(UUID.randomUUID().toString())
+                .items(List.of(
+                        OrderItemDto.builder()
+                                .productId(productId)
+                                .quantity(quantity)
+                                .build()
+                ))
+                .build();
 
-            OutboxMessage message = OutboxMessage.builder()
-                    .aggregateId(orderId)
-                    .eventType("ORDER_RESERVE_COMMAND")
-                    .payload(payload)
-                    .idempotencyKey(UUID.randomUUID().toString())
-                    .createdAt(now.minusMinutes(i))
-                    .processed(false)
-                    .retryCount(0)
-                    .build();
+        OutboxMessage message = OutboxMessage.builder()
+                .aggregateId(orderId)
+                .eventType(EVENT_TYPE_RESERVE_STOCK)
+                .payload(objectMapper.writeValueAsString(command))
+                .idempotencyKey(UUID.randomUUID().toString())
+                .createdAt(createdAt)
+                .processed(false)
+                .retryCount(0)
+                .build();
 
-            outboxRepository.save(message);
-        }
-
-        outboxScheduler.publishPendingMessages();
-
-        await().atMost(5, TimeUnit.SECONDS)
-                .untilAsserted(() -> {
-                    long pendingCount = outboxRepository.countByProcessedFalseAndFailedFalse();
-                    assertThat(pendingCount).isZero();
-                });
+        return outboxRepository.save(message);
     }
 }

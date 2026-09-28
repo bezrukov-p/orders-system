@@ -874,48 +874,6 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": { "mode": "none", "group": "A" },
-            "thresholdsStyle": { "mode": "off" }
-          },
-          "mappings": [],
-          "min": 0,
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
-          "unit": "ops"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 52 },
-      "id": 24,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "right", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (service_name) (rate(otel_db_client_connections_timeouts_total{service_name=~\"$service\"}[5m]))",
-          "legendFormat": "{{service_name}} timeouts/s",
-          "refId": "A"
-        }
-      ],
-      "title": "DB connection timeouts rate",
-      "type": "timeseries"
-    },
-    {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 60 },
       "id": 103,

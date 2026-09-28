@@ -1,5 +1,6 @@
 package com.bezrukov.orderservice.security;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,6 +19,7 @@ public class CustomJwtAuthenticationConverter
         implements Converter<Jwt, AbstractAuthenticationToken> {
 
     @Override
+    @WithSpan("convert.jwt")
     public AbstractAuthenticationToken convert(Jwt jwt) {
         UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getClaim("userId")));
         String username = jwt.getSubject();

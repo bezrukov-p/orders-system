@@ -4,6 +4,7 @@ import com.bezrukov.orderservice.entity.Role;
 import com.bezrukov.orderservice.entity.User;
 import com.bezrukov.orderservice.service.JwtService;
 import io.jsonwebtoken.Jwts;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ public class JwtServiceImpl implements JwtService {
         this.jwtAccessDuration = jwtAccessDuration;
     }
 
+    @WithSpan("jwt.access")
     @Override
     public String generateAccessToken(User user) {
         String accessToken = Jwts.builder()

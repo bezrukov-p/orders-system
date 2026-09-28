@@ -7,6 +7,7 @@ import com.bezrukov.orderservice.entity.OrderItem;
 import com.bezrukov.orderservice.entity.Status;
 import com.bezrukov.orderservice.kafka.OrderEventProducer;
 import com.bezrukov.orderservice.reposiroty.OrderRepository;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class OrderStatusUpdateService {
     private final OrderEventProducer orderEventProducer;
 
     @Transactional
+    @WithSpan("reserved.event")
     public void handleStockReservedEvent(StockReservedEvent event) {
         UUID orderId = event.getOrderId();
         Order order = orderRepository.findById(orderId)

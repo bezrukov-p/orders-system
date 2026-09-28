@@ -4,7 +4,6 @@ import com.bezrukov.common.dto.OrderItemDto;
 import com.bezrukov.common.event.ReserveStockCommand;
 import com.bezrukov.orderservice.dto.OrderItemRequest;
 import com.bezrukov.orderservice.dto.OrderRequest;
-import com.bezrukov.orderservice.dto.OrderResponse;
 import com.bezrukov.orderservice.entity.Order;
 import com.bezrukov.orderservice.entity.Status;
 import com.bezrukov.orderservice.entity.User;
@@ -60,7 +59,6 @@ class OrderServiceImplTest {
     private UUID userId;
     private User user;
     private OrderRequest orderRequest;
-    private List<OrderItemRequest> itemsRequest;
     private final String idempotencyKey = "key";
 
     @BeforeEach
@@ -72,7 +70,7 @@ class OrderServiceImplTest {
                 .username("testUser")
                 .build();
 
-        itemsRequest = List.of(
+        List<OrderItemRequest> itemsRequest = List.of(
                 OrderItemRequest.builder()
                         .productId(1L)
                         .quantity(2L)
@@ -121,7 +119,6 @@ class OrderServiceImplTest {
             verify(orderRepository, times(1)).save(any(Order.class));
             verify(userService, times(1)).getReferenceById(userId);
 
-            // ✅ Проверяем, что событие сохранено в Outbox, а НЕ отправлено напрямую в Kafka
             verify(outboxService, times(1)).saveEvent(
                     eq(savedOrder.getId()),
                     eq("ORDER_RESERVE_COMMAND"),

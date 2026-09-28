@@ -1,19 +1,17 @@
 package com.bezrukov.orderservice.service.impl;
 
 import com.bezrukov.orderservice.dto.OrderItemRequest;
-import com.bezrukov.orderservice.dto.OrderItemResponse;
 import com.bezrukov.orderservice.dto.OrderRequest;
-import com.bezrukov.orderservice.dto.OrderResponse;
 import com.bezrukov.orderservice.entity.Order;
 import com.bezrukov.orderservice.entity.Status;
 import com.bezrukov.orderservice.exceptions.OrderAccessDeniedException;
 import com.bezrukov.orderservice.exceptions.OrderNotFoundException;
-import com.bezrukov.orderservice.kafka.OrderCommandProducer;
 import com.bezrukov.orderservice.reposiroty.OrderRepository;
 import com.bezrukov.orderservice.service.OrderService;
 import com.bezrukov.orderservice.service.UserService;
 import com.bezrukov.common.dto.OrderItemDto;
 import com.bezrukov.common.event.ReserveStockCommand;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +31,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    @WithSpan("create.order")
     public Order createOrder(OrderRequest orderRequest, UUID userId) {
         String idempotencyKey = orderRequest.getIdempotencyKey();
         Optional<Order> existingOrder = orderRepository.findByIdempotencyKey(idempotencyKey);

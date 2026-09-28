@@ -7,7 +7,7 @@ import com.bezrukov.orderservice.kafka.OrderCommandProducer;
 import com.bezrukov.orderservice.metrics.OutboxMetrics;
 import com.bezrukov.orderservice.reposiroty.OutboxRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.micrometer.core.instrument.Timer;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Limit;
@@ -31,9 +31,9 @@ public class OutboxScheduler {
 
     private final OutboxMetrics metrics;
 
-
     @Scheduled(fixedDelayString = "${app.outbox.fixed-delay}")
     @Transactional
+    @WithSpan("publish.messages.sheduler")
     public void publishPendingMessages() {
         long startTime = System.currentTimeMillis();
 

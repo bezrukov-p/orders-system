@@ -11,6 +11,7 @@ import com.bezrukov.orderservice.service.JwtService;
 import com.bezrukov.orderservice.service.RefreshTokenService;
 import com.bezrukov.orderservice.service.UserService;
 import com.bezrukov.orderservice.utils.MapperDto;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -37,6 +38,7 @@ public class AuthServiceImpl implements AuthService {
         return userService.create(registerRequest, Set.of(Roles.USER));
     }
 
+    @WithSpan("auth.login")
     @Override
     public LoginResponse login(String username, String password) {
         try {

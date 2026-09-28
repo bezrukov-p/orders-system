@@ -8,6 +8,7 @@ import com.bezrukov.orderservice.reposiroty.UserRepository;
 import com.bezrukov.orderservice.service.ApplicationUserDetailsService;
 import com.bezrukov.orderservice.service.RoleService;
 import com.bezrukov.orderservice.service.UserService;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +17,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class UserServiceImpl implements UserService, ApplicationUserDetailsService {
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final RoleService roleService;
+    private final PasswordService passwordService;
 
     @Override
     @NonNull
@@ -55,6 +55,7 @@ public class UserServiceImpl implements UserService, ApplicationUserDetailsServi
     }
 
     @Override
+    @WithSpan("create.user")
     public User create(RegisterRequest registerRequest, Set<String> roles) {
         String username = registerRequest.username();
         if (userRepository.existsByUsername(username)) {
@@ -70,7 +71,7 @@ public class UserServiceImpl implements UserService, ApplicationUserDetailsServi
 
         User user = userRepository.save(User.builder()
                 .username(username)
-                .password(passwordEncoder.encode(registerRequest.password()))
+                .password(passwordService.encode(registerRequest.password()))
                 .email(registerRequest.email())
                 .roles(rolesToAttach)
                 .build());

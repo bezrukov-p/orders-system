@@ -30,6 +30,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ActiveProfiles("test")
 class OrderServiceIntegrationTest {
 
+    private static final String EVENT_TYPE_RESERVE_STOCK = "ORDER_RESERVE_COMMAND";
+    private static final long DEFAULT_PRODUCT_ID = 1L;
+    private static final long DEFAULT_QUANTITY = 2L;
+
     @Autowired
     private OrderService orderService;
 
@@ -60,23 +64,15 @@ class OrderServiceIntegrationTest {
         orderRepository.deleteAll();
         userRepository.deleteAll();
     }
+
     @Test
     @DisplayName("При создании заказа он сохраняется в БД и в Outbox")
     void shouldCreateOrderAndSaveToOutbox() {
-        String idempotencyKey = "test-key-" + UUID.randomUUID();
-        OrderRequest request = OrderRequest.builder()
-                .idempotencyKey(idempotencyKey)
-                .items(List.of(
-                        OrderItemRequest.builder()
-                                .productId(1L)
-                                .quantity(2L)
-                                .build()
-                ))
-                .build();
+        String idempotencyKey = randomIdempotencyKey();
+        OrderRequest request = orderRequest(idempotencyKey);
 
         Order order = orderService.createOrder(request, testUser.getId());
 
-        assertThat(order).isNotNull();
         assertThat(order.getId()).isNotNull();
         assertThat(order.getStatus()).isEqualTo(Status.PENDING);
         assertThat(order.getUser().getId()).isEqualTo(testUser.getId());
@@ -89,7 +85,7 @@ class OrderServiceIntegrationTest {
         assertThat(outboxMessages).hasSize(1);
 
         OutboxMessage outboxMessage = outboxMessages.getFirst();
-        assertThat(outboxMessage.getEventType()).isEqualTo("ORDER_RESERVE_COMMAND");
+        assertThat(outboxMessage.getEventType()).isEqualTo(EVENT_TYPE_RESERVE_STOCK);
         assertThat(outboxMessage.getAggregateId()).isEqualTo(order.getId());
         assertThat(outboxMessage.getIdempotencyKey()).isEqualTo(idempotencyKey);
         assertThat(outboxMessage.isProcessed()).isFalse();
@@ -98,28 +94,15 @@ class OrderServiceIntegrationTest {
     @Test
     @DisplayName("При повторном запросе возвращается существующий заказ")
     void shouldReturnExistingOrderForIdempotentRequest() {
-        String idempotencyKey = "same-key-" + UUID.randomUUID();
-        OrderRequest request = OrderRequest.builder()
-                .idempotencyKey(idempotencyKey)
-                .items(List.of(
-                        OrderItemRequest.builder()
-                                .productId(1L)
-                                .quantity(2L)
-                                .build()
-                ))
-                .build();
+        OrderRequest request = orderRequest(randomIdempotencyKey());
 
         Order firstOrder = orderService.createOrder(request, testUser.getId());
-
         Order secondOrder = orderService.createOrder(request, testUser.getId());
 
         assertThat(secondOrder.getId()).isEqualTo(firstOrder.getId());
 
-        long orderCount = orderRepository.count();
-        assertThat(orderCount).isEqualTo(1);
-
-        long outboxCount = outboxRepository.count();
-        assertThat(outboxCount).isEqualTo(1);
+        assertThat(orderRepository.count()).isEqualTo(1);
+        assertThat(outboxRepository.count()).isEqualTo(1);
     }
 
 
@@ -127,20 +110,28 @@ class OrderServiceIntegrationTest {
     @DisplayName("При несуществующем пользователе выбрасывается исключение")
     void shouldThrowExceptionWhenUserNotFound() {
         UUID nonExistentUserId = UUID.randomUUID();
-        OrderRequest request = OrderRequest.builder()
-                .idempotencyKey("test-key-" + UUID.randomUUID())
-                .items(List.of(
-                        OrderItemRequest.builder()
-                                .productId(1L)
-                                .quantity(2L)
-                                .build()
-                ))
-                .build();
+        OrderRequest request = orderRequest(randomIdempotencyKey());
 
         assertThatThrownBy(() -> orderService.createOrder(request, nonExistentUserId))
                 .isInstanceOf(RuntimeException.class);
 
         assertThat(orderRepository.count()).isZero();
         assertThat(outboxRepository.count()).isZero();
+    }
+
+    private String randomIdempotencyKey() {
+        return "test-key-" + UUID.randomUUID();
+    }
+
+    private OrderRequest orderRequest(String idempotencyKey) {
+        return OrderRequest.builder()
+                .idempotencyKey(idempotencyKey)
+                .items(List.of(
+                        OrderItemRequest.builder()
+                                .productId(DEFAULT_PRODUCT_ID)
+                                .quantity(DEFAULT_QUANTITY)
+                                .build()
+                ))
+                .build();
     }
 }

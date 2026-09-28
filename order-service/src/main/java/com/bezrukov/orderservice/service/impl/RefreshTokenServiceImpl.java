@@ -4,6 +4,7 @@ import com.bezrukov.orderservice.entity.RefreshToken;
 import com.bezrukov.orderservice.entity.User;
 import com.bezrukov.orderservice.reposiroty.RefreshTokenRepository;
 import com.bezrukov.orderservice.service.RefreshTokenService;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
+    @WithSpan("generate.refresh")
     public RefreshToken createRefreshToken(User user) {
         List<RefreshToken> oldTokens = refreshTokenRepository.findByUser(user);
         oldTokens.forEach(token -> token.setRevoked(true));

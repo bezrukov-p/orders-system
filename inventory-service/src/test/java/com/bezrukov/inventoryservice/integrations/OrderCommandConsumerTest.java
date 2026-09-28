@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +28,17 @@ import static org.awaitility.Awaitility.await;
 @ActiveProfiles("test")
 class OrderCommandConsumerTest {
 
+    private static final String TOPIC = "order-commands";
+    private static final String IPHONE_NAME = "iPhone";
+    private static final String MACBOOK_NAME = "MacBook";
+
+    private static final double IPHONE_PRICE = 999.99;
+    private static final double MACBOOK_PRICE = 1999.99;
+
+    private static final Duration KAFKA_SEND_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration AWAIT_POLL = Duration.ofMillis(100);
+
     @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -38,140 +50,124 @@ class OrderCommandConsumerTest {
 
     @AfterEach
     void tearDown() {
-        productRepository.deleteAll();
         idempotencyKeyRepository.deleteAll();
+        productRepository.deleteAll();
     }
+
     @Test
     @DisplayName("При достаточном количестве товар резервируется")
     void shouldReserveStockSuccessfully() {
-        Product product = productRepository.save(Product.builder()
-                .name("iPhone")
-                .quantity(100L)
-                .price(999.99)
-                .salePercent(0)
-                .build());
+        Product iphone = saveProduct(IPHONE_NAME, 100L, IPHONE_PRICE, 0);
+        long reservedQuantity = 5L;
+        long expectedQuantity = 100L - reservedQuantity;
 
-        ReserveStockCommand command = ReserveStockCommand.builder()
-                .orderId(UUID.randomUUID())
-                .idempotencyKey("key-" + UUID.randomUUID())
-                .items(List.of(
-                        OrderItemDto.builder()
-                                .productId(product.getId())
-                                .quantity(5L)
-                                .build()
-                ))
-                .build();
-        kafkaTemplate.send("order-commands", command.getOrderId().toString(), command);
+        sendReserveStockCommand(iphone.getId(), reservedQuantity);
 
-        await().atMost(5, TimeUnit.SECONDS)
-                .untilAsserted(() -> {
-                    Product updated = productRepository.findById(product.getId()).orElseThrow();
-                    assertThat(updated.getQuantity()).isEqualTo(95L);
-                });
+        awaitQuantity(iphone.getId(), expectedQuantity);
     }
     @Test
     @DisplayName("При недостатке товара резервирование не происходит")
     void shouldNotReserveWhenInsufficientStock() {
-        Product product = productRepository.save(Product.builder()
-                .name("iPhone")
-                .quantity(3L)
-                .price(999.99)
-                .salePercent(0)
-                .build());
+        Product iphone = saveProduct(IPHONE_NAME, 3L, IPHONE_PRICE, 0);
+        long initialQuantity = 3L;
+        long requestedQuantity = 10L;
 
-        ReserveStockCommand command = ReserveStockCommand.builder()
-                .orderId(UUID.randomUUID())
-                .idempotencyKey("key-" + UUID.randomUUID())
-                .items(List.of(
-                        OrderItemDto.builder()
-                                .productId(product.getId())
-                                .quantity(10L)
-                                .build()
-                ))
-                .build();
-        kafkaTemplate.send("order-commands", command.getOrderId().toString(), command);
+        sendReserveStockCommand(iphone.getId(), requestedQuantity);
 
-        await().during(2, TimeUnit.SECONDS)
-                .atMost(3, TimeUnit.SECONDS)
-                .untilAsserted(() -> {
-                    Product updated = productRepository.findById(product.getId()).orElseThrow();
-                    assertThat(updated.getQuantity()).isEqualTo(3L);
-                });
+        awaitQuantity(iphone.getId(), initialQuantity);
     }
 
     @Test
     @DisplayName("Повторная команда с тем же idempotencyKey игнорируется")
     void shouldIgnoreDuplicateCommand() {
-        Product product = productRepository.save(Product.builder()
-                .name("iPhone")
-                .quantity(100L)
-                .price(999.99)
-                .salePercent(0)
-                .build());
+        Product iphone = saveProduct(IPHONE_NAME, 100L, IPHONE_PRICE, 0);
+        String idempotencyKey = randomIdempotencyKey();
+        long reservedQuantity = 5L;
+        long expectedQuantity = 100L - reservedQuantity;
 
-        String idempotencyKey = "same-key-" + UUID.randomUUID();
-        ReserveStockCommand command = ReserveStockCommand.builder()
-                .orderId(UUID.randomUUID())
-                .idempotencyKey(idempotencyKey)
-                .items(List.of(
-                        OrderItemDto.builder()
-                                .productId(product.getId())
-                                .quantity(5L)
-                                .build()
-                ))
-                .build();
+        sendReserveStockCommand(iphone.getId(), reservedQuantity, idempotencyKey);
+        sendReserveStockCommand(iphone.getId(), reservedQuantity, idempotencyKey);
 
-        kafkaTemplate.send("order-commands", command.getOrderId().toString(), command);
-        kafkaTemplate.send("order-commands", command.getOrderId().toString(), command);
-
-        await().atMost(5, TimeUnit.SECONDS)
-                .untilAsserted(() -> {
-                    Product updated = productRepository.findById(product.getId()).orElseThrow();
-                    assertThat(updated.getQuantity()).isEqualTo(95L);
-                });
-
+        awaitQuantity(iphone.getId(), expectedQuantity);
         assertThat(idempotencyKeyRepository.existsByKey(idempotencyKey)).isTrue();
     }
 
     @Test
     @DisplayName("Резервирование нескольких товаров в одном заказе")
     void shouldReserveMultipleProducts() {
-        Product product1 = productRepository.save(Product.builder()
-                .name("iPhone")
-                .quantity(100L)
-                .price(999.99)
-                .salePercent(0)
-                .build());
+        Product iphone = saveProduct(IPHONE_NAME, 100L, IPHONE_PRICE, 0);
+        Product macbook = saveProduct(MACBOOK_NAME, 50L, MACBOOK_PRICE, 10);
 
-        Product product2 = productRepository.save(Product.builder()
-                .name("MacBook")
-                .quantity(50L)
-                .price(1999.99)
-                .salePercent(10)
-                .build());
+        long iphoneReserved = 2L;
+        long macbookReserved = 1L;
+        long iphoneExpected = 100L - iphoneReserved;
+        long macbookExpected = 50L - macbookReserved;
 
+        sendReserveStockCommand(List.of(
+                item(iphone.getId(), iphoneReserved),
+                item(macbook.getId(), macbookReserved)
+        ));
+
+        awaitQuantity(iphone.getId(), iphoneExpected);
+        awaitQuantity(macbook.getId(), macbookExpected);
+    }
+
+    private Product saveProduct(String name, long quantity, double price, int salePercent) {
+        return productRepository.save(Product.builder()
+                .name(name)
+                .quantity(quantity)
+                .price(price)
+                .salePercent(salePercent)
+                .build());
+    }
+
+    private OrderItemDto item(long productId, long quantity) {
+        return OrderItemDto.builder()
+                .productId(productId)
+                .quantity(quantity)
+                .build();
+    }
+
+    private String randomIdempotencyKey() {
+        return "key-" + UUID.randomUUID();
+    }
+
+    private void sendReserveStockCommand(long productId, long quantity) {
+        sendReserveStockCommand(productId, quantity, randomIdempotencyKey());
+    }
+
+    private void sendReserveStockCommand(long productId, long quantity, String idempotencyKey) {
+        sendReserveStockCommand(
+                List.of(item(productId, quantity)),
+                idempotencyKey
+        );
+    }
+
+    private void sendReserveStockCommand(List<OrderItemDto> items) {
+        sendReserveStockCommand(items, randomIdempotencyKey());
+    }
+
+    private void sendReserveStockCommand(List<OrderItemDto> items, String idempotencyKey) {
         ReserveStockCommand command = ReserveStockCommand.builder()
                 .orderId(UUID.randomUUID())
-                .idempotencyKey("key-" + UUID.randomUUID())
-                .items(List.of(
-                        OrderItemDto.builder()
-                                .productId(product1.getId())
-                                .quantity(2L)
-                                .build(),
-                        OrderItemDto.builder()
-                                .productId(product2.getId())
-                                .quantity(1L)
-                                .build()
-                ))
+                .idempotencyKey(idempotencyKey)
+                .items(items)
                 .build();
-        kafkaTemplate.send("order-commands", command.getOrderId().toString(), command);
 
-        await().atMost(5, TimeUnit.SECONDS)
-                .untilAsserted(() -> {
-                    Product updated1 = productRepository.findById(product1.getId()).orElseThrow();
-                    Product updated2 = productRepository.findById(product2.getId()).orElseThrow();
-                    assertThat(updated1.getQuantity()).isEqualTo(98L);
-                    assertThat(updated2.getQuantity()).isEqualTo(49L);
-                });
+        kafkaTemplate.send(TOPIC, command.getOrderId().toString(), command)
+                .orTimeout(KAFKA_SEND_TIMEOUT.toSeconds(), TimeUnit.SECONDS)
+                .join();
+    }
+
+    private void awaitQuantity(long productId, long expected) {
+        await().atMost(AWAIT_TIMEOUT)
+                .pollInterval(AWAIT_POLL)
+                .untilAsserted(() ->
+                        assertThat(quantityOf(productId)).isEqualTo(expected)
+                );
+    }
+
+    private long quantityOf(long productId) {
+        return productRepository.findById(productId).orElseThrow().getQuantity();
     }
 }

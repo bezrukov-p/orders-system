@@ -14,5 +14,4 @@ VALUES (gen_random_uuid(), 'USER'),
 ON CONFLICT (name) DO NOTHING;
 
 -- rollback DELETE FROM roles WHERE name IN ('USER', 'ADMIN');
--- rollback DROP INDEX IF EXISTS idx_roles_name;
 -- rollback DROP TABLE IF EXISTS roles;

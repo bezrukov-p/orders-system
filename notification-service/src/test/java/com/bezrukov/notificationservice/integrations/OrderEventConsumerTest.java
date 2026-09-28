@@ -4,7 +4,6 @@ import com.bezrukov.common.event.OrderConfirmedEvent;
 import com.bezrukov.common.event.OrderItemEvent;
 import com.bezrukov.notificationservice.entity.Order;
 import com.bezrukov.notificationservice.repository.OrderRepository;
-import org.hibernate.Hibernate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,9 +13,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -27,6 +27,12 @@ import static org.awaitility.Awaitility.await;
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
 class OrderEventConsumerTest {
+
+    private static final String ORDER_EVENTS_TOPIC = "order-events";
+
+    private static final Duration KAFKA_SEND_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration AWAIT_POLL = Duration.ofMillis(100);
 
     @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
@@ -43,31 +49,27 @@ class OrderEventConsumerTest {
     @DisplayName("При получении OrderConfirmedEvent заказ сохраняется")
     void shouldSaveOrderToDatabase() {
         UUID orderId = UUID.randomUUID();
+        double totalPrice = 1999.98;
         OrderConfirmedEvent event = OrderConfirmedEvent.builder()
                 .orderId(orderId)
                 .userId(UUID.randomUUID())
                 .userEmail("test@example.com")
-                .totalPrice(1999.98)
+                .totalPrice(totalPrice)
                 .items(List.of(
-                        OrderItemEvent.builder()
-                                .productId(1L)
-                                .quantity(2L)
-                                .price(999.99)
-                                .salePercent(0)
-                                .build()
+                        item(1L, 2L, 999.99, 0)
                 ))
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        kafkaTemplate.send("order-events", orderId.toString(), event);
+        sendOrderConfirmedEvent(orderId, event);
 
-        await().atMost(5, TimeUnit.SECONDS)
-                .pollInterval(100, TimeUnit.MILLISECONDS)
+        await().atMost(AWAIT_TIMEOUT)
+                .pollInterval(AWAIT_POLL)
+                .ignoreException(NoSuchElementException.class)
                 .untilAsserted(() -> {
-                    Optional<Order> saved = orderRepository.findByOrderId(orderId);
-                    assertThat(saved).isPresent();
-                    assertThat(saved.get().getOrderId()).isEqualTo(orderId);
-                    assertThat(saved.get().getTotalPrice()).isEqualTo(1999.98);
+                    Order saved = orderOf(orderId);
+                    assertThat(saved.getOrderId()).isEqualTo(orderId);
+                    assertThat(saved.getTotalPrice()).isEqualTo(totalPrice);
                 });
     }
 
@@ -82,11 +84,11 @@ class OrderEventConsumerTest {
                 .items(List.of())
                 .build();
 
-        kafkaTemplate.send("order-events", orderId.toString(), event);
-        kafkaTemplate.send("order-events", orderId.toString(), event);
+        sendOrderConfirmedEvent(orderId, event);
+        sendOrderConfirmedEvent(orderId, event);
 
-        await().atMost(5, TimeUnit.SECONDS)
-                .pollInterval(100, TimeUnit.MILLISECONDS)
+        await().atMost(AWAIT_TIMEOUT)
+                .pollInterval(AWAIT_POLL)
                 .untilAsserted(() -> {
                     long count = orderRepository.countByOrderId(orderId);
                     assertThat(count).isEqualTo(1);
@@ -97,35 +99,48 @@ class OrderEventConsumerTest {
     @DisplayName("Заказ сохраняется с позициями")
     void shouldSaveOrderWithItems() {
         UUID orderId = UUID.randomUUID();
+        double totalPrice = 2044.97;
         OrderConfirmedEvent event = OrderConfirmedEvent.builder()
                 .orderId(orderId)
                 .userId(UUID.randomUUID())
-                .totalPrice(2044.97)
+                .totalPrice(totalPrice)
                 .items(List.of(
-                        OrderItemEvent.builder()
-                                .productId(1L)
-                                .quantity(2L)
-                                .price(999.99)
-                                .salePercent(0)
-                                .build(),
-                        OrderItemEvent.builder()
-                                .productId(2L)
-                                .quantity(1L)
-                                .price(49.99)
-                                .salePercent(10)
-                                .build()
+                        item(1L, 2L, 999.99, 0),
+                        item(2L, 1L, 49.99, 10)
                 ))
                 .build();
 
-        kafkaTemplate.send("order-events", orderId.toString(), event);
+        sendOrderConfirmedEvent(orderId, event);
 
-        await().atMost(5, TimeUnit.SECONDS)
-                .pollInterval(100, TimeUnit.MILLISECONDS)
+        await().atMost(AWAIT_TIMEOUT)
+                .pollInterval(AWAIT_POLL)
                 .untilAsserted(() -> {
-                    Optional<Order> saved = orderRepository.findByOrderIdWithItems(orderId);
-                    assertThat(saved).isPresent();
-                    assertThat(saved.get().getItems()).hasSize(2);
-                    assertThat(saved.get().getTotalPrice()).isEqualTo(2044.97);
+                    Order saved = orderWithItemsOf(orderId);
+                    assertThat(saved.getItems()).hasSize(2);
+                    assertThat(saved.getTotalPrice()).isEqualTo(totalPrice);
                 });
+    }
+
+    private OrderItemEvent item(long productId, long quantity, double price, int salePercent) {
+        return OrderItemEvent.builder()
+                .productId(productId)
+                .quantity(quantity)
+                .price(price)
+                .salePercent(salePercent)
+                .build();
+    }
+
+    private void sendOrderConfirmedEvent(UUID orderId, OrderConfirmedEvent event) {
+        kafkaTemplate.send(ORDER_EVENTS_TOPIC, orderId.toString(), event)
+                .orTimeout(KAFKA_SEND_TIMEOUT.toSeconds(), TimeUnit.SECONDS)
+                .join();
+    }
+
+    private Order orderOf(UUID orderId) {
+        return orderRepository.findByOrderId(orderId).orElseThrow();
+    }
+
+    private Order orderWithItemsOf(UUID orderId) {
+        return orderRepository.findByOrderIdWithItems(orderId).orElseThrow();
     }
 }

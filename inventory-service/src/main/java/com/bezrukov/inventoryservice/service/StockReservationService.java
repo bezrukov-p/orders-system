@@ -11,6 +11,7 @@ import com.bezrukov.inventoryservice.exception.InsufficientStockException;
 import com.bezrukov.inventoryservice.exception.ProductNotFoundException;
 import com.bezrukov.inventoryservice.repository.IdempotencyKeyRepository;
 import com.bezrukov.inventoryservice.repository.ProductRepository;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class StockReservationService {
     private final IdempotencyKeyRepository idempotencyKeyRepository;
 
     @Transactional
+    @WithSpan("reserve.stock")
     public StockReservedEvent reserveStock(ReserveStockCommand command) {
         //TODO названия зарефакторить
         UUID orderId = command.getOrderId();
