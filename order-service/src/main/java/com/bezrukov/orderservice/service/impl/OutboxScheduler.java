@@ -63,7 +63,7 @@ public class OutboxScheduler {
         for (OutboxMessage message : messages) {
             try {
                 ReserveStockCommand event = switch (message.getEventType()) {
-                    case "ORDER_RESERVE_COMMAND" -> objectMapper.readValue( //TODO вынести в константу
+                    case "ORDER_RESERVE_COMMAND" -> objectMapper.readValue(
                             message.getPayload(), ReserveStockCommand.class
                     );
                     default -> throw new IllegalStateException("Unknown event type: " + message.getEventType());

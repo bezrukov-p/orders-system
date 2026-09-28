@@ -35,22 +35,40 @@ public class StockReservationService {
     @Transactional
     @WithSpan("reserve.stock")
     public StockReservedEvent reserveStock(ReserveStockCommand command) {
-        //TODO названия зарефакторить
         UUID orderId = command.getOrderId();
         String idempotencyKey = command.getIdempotencyKey();
         List<OrderItemDto> orderItems = command.getItems();
 
         if (idempotencyKeyRepository.existsByKey(idempotencyKey)) {
             log.warn("Duplicate command orderId: {}. idempotencyKey: {}", orderId, idempotencyKey);
-            return StockReservedEvent.builder()
-                    .orderId(orderId)
-                    .idempotencyKey(idempotencyKey)
-                    .success(false)
-                    .message("Duplicate command orderId: " + orderId)
-                    .build();
+            return duplicateResponse(orderId, idempotencyKey);
         }
 
-        List<Long> productIds = orderItems.stream().map(OrderItemDto::getProductId).toList();
+        Map<Long, Product> productMap = loadProductsOrThrow(orderItems);
+
+        List<InsufficientStockItem> insufficientItems = findInsufficientItems(orderItems, productMap);
+
+        if (!insufficientItems.isEmpty()) {
+            throw new InsufficientStockException("Insufficient stock for products: " + insufficientItems);
+        }
+
+        List<ReservedItemDto> reservedItems = reserveAndBuildItems(orderItems, productMap);
+        productRepository.saveAll(productMap.values());
+
+        idempotencyKeyRepository.save(IdempotencyKey.builder()
+                .key(idempotencyKey)
+                .build());
+
+        log.info("Stock reserved: orderId={}", orderId);
+        return successResponse(orderId, idempotencyKey, reservedItems);
+    }
+
+    private Map<Long, Product> loadProductsOrThrow(List<OrderItemDto> orderItems) {
+        List<Long> productIds = orderItems.stream()
+                .map(OrderItemDto::getProductId)
+                .sorted() // для избежания race condition
+                .toList();
+
         List<Product> products = productRepository.findAllById(productIds);
         if (products.size() != productIds.size()) {
             Set<Long> foundIds = products.stream().map(Product::getId).collect(Collectors.toSet());
@@ -60,13 +78,17 @@ public class StockReservationService {
             throw new ProductNotFoundException("products not found: " + missingIds);
         }
 
-        Map<Long, Product> productMap = products.stream()
+        return products.stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
-        List<InsufficientStockItem> insufficientItems = new ArrayList<>();
-        List<ReservedItemDto> reservedItems = new ArrayList<>();
-        for (var item : orderItems) {
-            Product product = productMap.get(item.getProductId());
+    }
 
+    private List<InsufficientStockItem> findInsufficientItems(
+            List<OrderItemDto> orderItems, Map<Long, Product> productMap) {
+
+        List<InsufficientStockItem> insufficientItems = new ArrayList<>();
+
+        for (OrderItemDto item : orderItems) {
+            Product product = productMap.get(item.getProductId());
             if (product.getQuantity() < item.getQuantity()) {
                 insufficientItems.add(InsufficientStockItem.builder()
                         .productId(product.getId())
@@ -74,10 +96,19 @@ public class StockReservationService {
                         .requestedQuantity(item.getQuantity())
                         .build());
             }
+        }
 
+        return insufficientItems;
+    }
+
+    private List<ReservedItemDto> reserveAndBuildItems(
+            List<OrderItemDto> orderItems, Map<Long, Product> productMap) {
+
+        List<ReservedItemDto> reservedItems = new ArrayList<>(orderItems.size());
+
+        for (OrderItemDto item : orderItems) {
+            Product product = productMap.get(item.getProductId());
             product.setQuantity(product.getQuantity() - item.getQuantity());
-
-            double totalPrice = item.getQuantity() * (product.getPrice() * ((100 - product.getSalePercent()) /100.0));
 
             reservedItems.add(ReservedItemDto.builder()
                     .id(product.getId())
@@ -85,21 +116,29 @@ public class StockReservationService {
                     .price(product.getPrice())
                     .quantity(item.getQuantity())
                     .salePercent(product.getSalePercent())
-                    .totalPrice(totalPrice)
+                    .totalPrice(calculateTotalPrice(item, product))
                     .build());
         }
 
-        if (!insufficientItems.isEmpty()) {
-            throw new InsufficientStockException("Insufficient stock for products: " + insufficientItems); //TODO перехватывать exception?
-        }
+        return reservedItems;
+    }
 
-        productRepository.saveAll(products);
+    private double calculateTotalPrice(OrderItemDto item, Product product) {
+        double discountMultiplier = (100 - product.getSalePercent()) / 100.0;
+        return item.getQuantity() * product.getPrice() * discountMultiplier;
+    }
 
-        idempotencyKeyRepository.save(IdempotencyKey.builder()
-                .key(idempotencyKey)
-                .build());
+    private StockReservedEvent duplicateResponse(UUID orderId, String idempotencyKey) {
+        return StockReservedEvent.builder()
+                .orderId(orderId)
+                .idempotencyKey(idempotencyKey)
+                .success(false)
+                .message("Duplicate command orderId: " + orderId)
+                .build();
+    }
 
-        log.info("Stock reserved: orderId={}", orderId);
+    private StockReservedEvent successResponse(UUID orderId, String idempotencyKey,
+                                               List<ReservedItemDto> reservedItems) {
         return StockReservedEvent.builder()
                 .orderId(orderId)
                 .items(reservedItems)

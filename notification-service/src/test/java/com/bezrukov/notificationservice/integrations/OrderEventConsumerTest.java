@@ -75,7 +75,7 @@ class OrderEventConsumerTest {
 
     @Test
     @DisplayName("Повторное событие не создает дубликат")
-    void shouldIgnoreDuplicateEvent() {
+    void shouldIgnoreDuplicateEvent() throws InterruptedException {
         UUID orderId = UUID.randomUUID();
         OrderConfirmedEvent event = OrderConfirmedEvent.builder()
                 .orderId(orderId)
@@ -87,12 +87,9 @@ class OrderEventConsumerTest {
         sendOrderConfirmedEvent(orderId, event);
         sendOrderConfirmedEvent(orderId, event);
 
-        await().atMost(AWAIT_TIMEOUT)
-                .pollInterval(AWAIT_POLL)
-                .untilAsserted(() -> {
-                    long count = orderRepository.countByOrderId(orderId);
-                    assertThat(count).isEqualTo(1);
-                });
+        Thread.sleep(1000);
+        assertThat(orderRepository.countByOrderId(orderId))
+                .isEqualTo(1);
     }
 
     @Test
@@ -114,6 +111,7 @@ class OrderEventConsumerTest {
 
         await().atMost(AWAIT_TIMEOUT)
                 .pollInterval(AWAIT_POLL)
+                .ignoreException(NoSuchElementException.class)
                 .untilAsserted(() -> {
                     Order saved = orderWithItemsOf(orderId);
                     assertThat(saved.getItems()).hasSize(2);

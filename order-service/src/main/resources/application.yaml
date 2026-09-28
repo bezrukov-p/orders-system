@@ -85,4 +85,4 @@ management:
       enabled: true
   metrics:
     tags:
-      application: ${spring.application.name} # TODO удалить в общём yml
+      application: ${spring.application.name}

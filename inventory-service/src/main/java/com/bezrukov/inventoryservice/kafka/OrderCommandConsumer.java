@@ -7,6 +7,7 @@ import com.bezrukov.inventoryservice.exception.ProductNotFoundException;
 import com.bezrukov.inventoryservice.service.StockReservationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
@@ -26,25 +27,24 @@ public class OrderCommandConsumer {
             StockReservedEvent event = stockReservationService.reserveStock(command);
             eventProducer.sendStockReservedEvent(event);
         } catch (ProductNotFoundException e) {
-            log.error("Product not found: {}", e.getMessage());
-            eventProducer.sendStockReservedEvent(
-                    StockReservedEvent.builder()
-                            .orderId(command.getOrderId())
-                            .idempotencyKey(command.getIdempotencyKey())
-                            .success(false)
-                            .message(e.getMessage())
-                            .build()
-            );
+            log.error(e.getMessage());
+            sendFailureEvent(command, e.getMessage());
         } catch (InsufficientStockException e) {
-            log.warn("Insufficient stock: {}", e.getMessage());
-            eventProducer.sendStockReservedEvent(
-                    StockReservedEvent.builder()
-                            .orderId(command.getOrderId())
-                            .idempotencyKey(command.getIdempotencyKey())
-                            .success(false)
-                            .message(e.getMessage())
-                            .build()
-            );
+            log.warn(e.getMessage());
+            sendFailureEvent(command, e.getMessage());
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Duplicate idempotencyKey for orderId={}", command.getOrderId());
         }
+    }
+
+    private void sendFailureEvent(ReserveStockCommand command, String errorMessage) {
+        eventProducer.sendStockReservedEvent(
+                StockReservedEvent.builder()
+                        .orderId(command.getOrderId())
+                        .idempotencyKey(command.getIdempotencyKey())
+                        .success(false)
+                        .message(errorMessage)
+                        .build()
+        );
     }
 }

@@ -121,7 +121,7 @@ class InventoryEventConsumerTest {
 
     @Test
     @DisplayName("Событие для несуществующего заказа игнорируется")
-    void shouldIgnoreEventForNonExistentOrder() {
+    void shouldIgnoreEventForNonExistentOrder() throws InterruptedException {
         UUID nonExistentOrderId = UUID.randomUUID();
         StockReservedEvent event = StockReservedEvent.builder()
                 .orderId(nonExistentOrderId)
@@ -132,11 +132,8 @@ class InventoryEventConsumerTest {
 
         sendInventoryEvent(nonExistentOrderId, event);
 
-        await().atMost(AWAIT_TIMEOUT)
-                .pollInterval(AWAIT_POLL)
-                .untilAsserted(() ->
-                        assertThat(orderRepository.findById(nonExistentOrderId)).isEmpty()
-                );
+        Thread.sleep(1000);
+        assertThat(orderRepository.findById(nonExistentOrderId)).isEmpty();
     }
 
     @Test
