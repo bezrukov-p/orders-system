@@ -25,5 +25,5 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private UUID id;
     @Column(unique = true)
-    private String name; //TODO primary key двойной?
+    private String name;
 }

@@ -25,7 +25,7 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      acks: all
+      acks: 1
       retries: 3
       compression-type: lz4
       batch-size: 16384          # 16 КБ
@@ -34,6 +34,7 @@ spring:
       max-in-flight-requests-per-connection: 5
     listener:
       concurrency: 5
+      ack-mode: MANUAL
 
 server:
   port: ${SERVER_PORT:8081}

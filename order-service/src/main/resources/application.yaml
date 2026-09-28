@@ -40,6 +40,7 @@ spring:
     listener:
       observation-enabled: true
       concurrency: 5
+      ack-mode: MANUAL
     template:
       observation-enabled: true
 
