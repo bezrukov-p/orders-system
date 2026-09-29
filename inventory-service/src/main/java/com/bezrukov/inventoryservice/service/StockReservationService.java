@@ -17,11 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,13 +43,35 @@ public class StockReservationService {
         Map<Long, Product> productMap = loadProductsOrThrow(orderItems);
 
         List<InsufficientStockItem> insufficientItems = findInsufficientItems(orderItems, productMap);
-
         if (!insufficientItems.isEmpty()) {
             throw new InsufficientStockException("Insufficient stock for products: " + insufficientItems);
         }
 
-        List<ReservedItemDto> reservedItems = reserveAndBuildItems(orderItems, productMap);
-        productRepository.saveAll(productMap.values());
+        //sorted для избежания deadlock
+        List<OrderItemDto> sortedItems = orderItems.stream()
+                .sorted(Comparator.comparing(OrderItemDto::getProductId))
+                .toList();
+
+        List<ReservedItemDto> reservedItems = new ArrayList<>(sortedItems.size());
+
+        for (OrderItemDto item : sortedItems) {
+            int updated = productRepository.tryReserve(item.getProductId(), item.getQuantity());
+
+            if (updated == 0) {
+                Product product = productMap.get(item.getProductId());
+                log.error("Race condition: productId={}, requested={}, available={}",
+                        item.getProductId(), item.getQuantity(), product.getQuantity());
+                //error для удобного нахождения в логах
+
+                throw new InsufficientStockException(String.format(
+                        "Race condition: productId=%d, requested=%d, available=%d",
+                        item.getProductId(), item.getQuantity(), product.getQuantity()
+                ));
+            }
+
+            Product product = productMap.get(item.getProductId());
+            reservedItems.add(buildReservedItem(item, product));
+        }
 
         idempotencyKeyRepository.save(IdempotencyKey.builder()
                 .key(idempotencyKey)
@@ -66,7 +84,6 @@ public class StockReservationService {
     private Map<Long, Product> loadProductsOrThrow(List<OrderItemDto> orderItems) {
         List<Long> productIds = orderItems.stream()
                 .map(OrderItemDto::getProductId)
-                .sorted() // для избежания race condition
                 .toList();
 
         List<Product> products = productRepository.findAllById(productIds);
@@ -101,26 +118,15 @@ public class StockReservationService {
         return insufficientItems;
     }
 
-    private List<ReservedItemDto> reserveAndBuildItems(
-            List<OrderItemDto> orderItems, Map<Long, Product> productMap) {
-
-        List<ReservedItemDto> reservedItems = new ArrayList<>(orderItems.size());
-
-        for (OrderItemDto item : orderItems) {
-            Product product = productMap.get(item.getProductId());
-            product.setQuantity(product.getQuantity() - item.getQuantity());
-
-            reservedItems.add(ReservedItemDto.builder()
-                    .id(product.getId())
-                    .name(product.getName())
-                    .price(product.getPrice())
-                    .quantity(item.getQuantity())
-                    .salePercent(product.getSalePercent())
-                    .totalPrice(calculateTotalPrice(item, product))
-                    .build());
-        }
-
-        return reservedItems;
+    private ReservedItemDto buildReservedItem(OrderItemDto item, Product product) {
+        return ReservedItemDto.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .price(product.getPrice())
+                .quantity(item.getQuantity())
+                .salePercent(product.getSalePercent())
+                .totalPrice(calculateTotalPrice(item, product))
+                .build();
     }
 
     private double calculateTotalPrice(OrderItemDto item, Product product) {
