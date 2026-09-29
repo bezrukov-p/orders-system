@@ -19,6 +19,19 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Периодически публикует накопленные события из таблицы outbox в Kafka.
+ *
+ * <p>Запускается с фиксированным интервалом ({@code app.outbox.fixed-delay}).
+ * За один прогон берёт не больше {@code app.outbox.batch-size} сообщений.
+ *
+ * <p>Для каждого сообщения:
+ * <ul>
+ *   <li>При успешной отправке — помечает {@code processed = true}</li>
+ *   <li>При ошибке — увеличивает {@code retryCount}; после исчерпания
+ *       {@code maxRetries} помечает {@code failed = true}</li>
+ * </ul>
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor

@@ -18,6 +18,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Обрабатывает событие резервирования товара от inventory-service
+ * и переводит заказ в финальный статус.
+ *
+ * <p><b>Идемпотентность:</b> повторное событие для уже подтверждённого
+ * заказа игнорируется.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -26,6 +33,14 @@ public class OrderStatusUpdateService {
     private final OrderRepository orderRepository;
     private final OrderEventProducer orderEventProducer;
 
+    /**
+     * Обновляет статус заказа по результату резервирования:
+     * <ul>
+     *   <li>{@code success = true} → CONFIRMED, сохраняет позиции и totalPrice,
+     *       публикует {@code OrderConfirmedEvent}</li>
+     *   <li>{@code success = false} → REJECTED</li>
+     * </ul>
+     */
     @Transactional
     @WithSpan("reserved.event")
     public void handleStockReservedEvent(StockReservedEvent event) {

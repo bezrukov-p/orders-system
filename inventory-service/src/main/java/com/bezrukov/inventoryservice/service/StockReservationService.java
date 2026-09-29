@@ -21,6 +21,19 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Резервирование товаров на складе по команде от order-service.
+ *
+ * <p><b>Идемпотентность:</b> повторная команда с тем же {@code idempotencyKey}
+ * не приводит к повторному списанию.
+ *
+ * <p><b>Защита от race condition:</b> остатки проверяются дважды — сначала
+ * в памяти (для читаемого сообщения), затем атомарно в SQL через
+ * {@code UPDATE ... WHERE quantity >= ?}.
+ *
+ * <p><b>Защита от deadlock:</b> позиции сортируются по {@code productId}
+ * перед списанием — все транзакции блокируют строки в одном порядке.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor

@@ -21,6 +21,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Реализация управления заказами.
+ * <p>
+ * Outbox pattern: заказ и событие {@code ReserveStockCommand}
+ * сохраняются в одной транзакции БД, отправка в Kafka — асинхронно
+ * через {@link OutboxScheduler}.
+ *
+ * <p>Идемпотентность: повторный вызов {@link #createOrder}
+ * с тем же {@code idempotencyKey} возвращает уже существующий заказ.
+ */
 @Service
 @AllArgsConstructor
 @Slf4j
@@ -29,6 +39,10 @@ public class OrderServiceImpl implements OrderService {
     private final OutboxService outboxService;
     private final UserService userService;
 
+    /**
+     * Создаёт заказ в статусе PENDING и кладёт событие в outbox.
+     * Заказ возвращается сразу, не дожидаясь резервирования товара.
+     */
     @Override
     @Transactional
     @WithSpan("create.order")
@@ -72,6 +86,12 @@ public class OrderServiceImpl implements OrderService {
         return order;
     }
 
+    /**
+     * Возвращает заказ, если он принадлежит указанному пользователю.
+     *
+     * @throws OrderNotFoundException     если заказ не найден
+     * @throws OrderAccessDeniedException если заказ принадлежит другому пользователю
+     */
     @Override
     public Order getOrder(UUID orderId, UUID userId) {
         Order order = orderRepository.findById(orderId)

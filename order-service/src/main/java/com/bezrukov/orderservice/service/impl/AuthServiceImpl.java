@@ -24,6 +24,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.Set;
 
+/**
+ * Реализация аутентификации: регистрация, логин, обновление токенов.
+ *
+ * <p>Использует Spring Security для проверки пароля, JWT для access-токена
+ * и отдельную таблицу refresh-токенов для долгоживущих сессий.
+ */
 @Service
 @AllArgsConstructor
 @Slf4j
@@ -33,11 +39,21 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
 
+    /**
+     * Регистрирует нового пользователя с ролью USER.
+     */
     @Override
     public User register(RegisterRequest registerRequest) {
         return userService.create(registerRequest, Set.of(Roles.USER));
     }
 
+    /**
+     * Проверяет логин/пароль и выдаёт пару access + refresh токенов.
+     *
+     * <p>При любой ошибке аутентификации возвращает обезличенное
+     * {@link AuthenticationException} — чтобы не раскрывать, существует
+     * ли пользователь с таким именем.
+     */
     @WithSpan("auth.login")
     @Override
     public LoginResponse login(String username, String password) {
@@ -76,6 +92,12 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    /**
+     * Обновляет access-токен по действующему refresh-токену.
+     * Старый refresh-токен инвалидируется, выдается новый.
+     *
+     * @return новый {@link LoginResponse}
+     */
     @Override
     public @Nullable LoginResponse refreshToken(String token) {
         RefreshToken refreshToken = refreshTokenService.getRefreshToken(token).orElseThrow(
