@@ -1,0 +1,4 @@
+databaseChangeLog:
+  - includeAll:
+      path: db/notification/migration/
+      relativeToChangelogFile: false

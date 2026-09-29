@@ -1,0 +1,4 @@
+databaseChangeLog:
+  - includeAll:
+      path: db/order/migration/
+      relativeToChangelogFile: false

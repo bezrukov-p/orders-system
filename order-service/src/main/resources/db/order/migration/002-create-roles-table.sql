@@ -1,0 +1,17 @@
+-- liquibase formatted sql
+
+-- changeset bezrukov-p:create_roles_table
+-- comment: Создание таблицы roles
+CREATE TABLE IF NOT EXISTS roles
+(
+    id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
+INSERT INTO roles (id, name)
+VALUES (gen_random_uuid(), 'USER'),
+       (gen_random_uuid(), 'ADMIN')
+ON CONFLICT (name) DO NOTHING;
+
+-- rollback DELETE FROM roles WHERE name IN ('USER', 'ADMIN');
+-- rollback DROP TABLE IF EXISTS roles;

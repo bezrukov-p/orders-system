@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:${DB_ORDER_PORT:5432}/${DB_ORDER_NAME:orders_db}
+    username: ${DB_USERNAME:admin}
+    password: ${DB_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  kafka:
+    bootstrap-servers: localhost:${KAFKA_PORT:29092}
+
+jwt:
+  access:
+    secret: "paJJLVg0HrbiyQVPHCZPcf36CvDc8lekDRLDYP6NIep440LFRzzUWKScvVBspXln"
+
+logging:
+  level:
+    com.bezrukov: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.springframework.cache: TRACE

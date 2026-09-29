@@ -1,10 +1,96 @@
 spring:
   application:
     name: order-service
+
   liquibase:
-    enabled: false
-    change-log: classpath:/db/changelog/db.changelog-master.yaml
+    enabled: true
+    change-log: classpath:/db/order/changelog/db.changelog-master-order.yaml
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/orders_db
-    username: admin
-    password: admin
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      connection-timeout: 30000
+      leak-detection-threshold: 20000
+
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: 1
+      retries: 3
+      compression-type: lz4
+      batch-size: 16384          # 16 КБ
+      linger-ms: 0
+      buffer-memory: 33554432    # 32 МБ
+      max-in-flight-requests-per-connection: 5
+    consumer:
+      group-id: order-service-group
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      max-poll-records: 500                    # max-poll-records × avg_processing_time < max-poll-interval-ms
+      max-poll-interval-ms: 300000             # 5 мин — макс время обработки
+      session-timeout-ms: 10000
+      heartbeat-interval-ms: 3000
+      fetch-min-size: 1
+      fetch-max-wait: 500
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+    listener:
+      observation-enabled: true
+      concurrency: 5
+      ack-mode: MANUAL
+    template:
+      observation-enabled: true
+
+  cache:
+    type: caffeine
+    cache-names: roles
+    caffeine:
+      spec: maximumSize=100,expireAfterWrite=1h
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  outbox:
+    batch-size: 200
+    fixed-delay: 800
+    max-retries: 3
+    retry-delay-ms: 60000
+    retention-days: 7
+
+jwt:
+  access:
+    secret: "paJJLVg0HrbiyQVPHCZPcf36CvDc8lekDRLDYP6NIep440LFRzzUWKScvVBspXln"
+    duration: 100d
+  refresh:
+    duration: 300d
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"
+  level:
+    org.apache.kafka: WARN
+    com.bezrukov: INFO
+    org.hibernate.SQL: WARN
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+        #include: "*"
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
