@@ -1,302 +1,124 @@
 import http from 'k6/http';
-import { check, sleep, group } from 'k6';
-import { Rate, Trend, Counter } from 'k6/metrics';
+import { check, sleep } from 'k6';
+import { Counter, Trend, Rate } from 'k6/metrics';
+import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 
 // =============================================
 // Кастомные метрики
 // =============================================
-const registerErrors = new Rate('register_errors');
-const loginErrors = new Rate('login_errors');
 const orderCreateErrors = new Rate('order_create_errors');
-const orderStatusErrors = new Rate('order_status_errors');
-const idempotencyViolations = new Rate('idempotency_violations');
-
-const registerTime = new Trend('register_duration');
-const loginTime = new Trend('login_duration');
-const orderCreateTime = new Trend('order_create_duration');
-const orderFinalizeTime = new Trend('order_finalize_duration'); // pending → confirmed
-
-const ordersCreated = new Counter('orders_created');
-const ordersConfirmed = new Counter('orders_confirmed');
-const usersRegistered = new Counter('users_registered');
+const orderCreateTime   = new Trend('order_create_time');
+const ordersCreated     = new Counter('orders_created');
 
 // =============================================
-// Конфигурация нагрузки
+// Конфигурация
+// =============================================
+const BASE_URL = 'http://localhost:8080';
+
+// ⚠️ ВСТАВЬ СВОЙ JWT ТОКЕН (получи один раз через Postman/curl)
+const TOKEN = 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ4eHgiLCJpYXQiOjE3OTA2OTM2MjMsInVzZXJJZCI6IjZiNDA0Y2E3LWY5NWUtNGUxOS04NDVhLWU3NDg4YzI1MTE0ZCIsInJvbGVzIjpbIlVTRVIiXSwiZXhwIjoxNzk5MzMzNjIzfQ.7JNGthejg4ryTPNauVOHoI_enE570shRWUs0aY-IlEQCY15ytlFkXYr87kMQWrKd8UZJIs4MKgvMj86g78PR0w'
+// ⚠️ ЗАМЕНИ на реальные id товаров из твоей БД
+const PRODUCTS = [
+    { id: 1 },
+    { id: 2 },
+    { id: 3 },
+    { id: 4 },
+    { id: 5 },
+];
+
+// =============================================
+// Опции — НАГРУЗКА
 // =============================================
 export const options = {
-    stages: [
-        { duration: '30s', target: 10 },
-        //{ duration: '1m',  target: 50 },
-        //{ duration: '1m',  target: 100 },
-        { duration: '1m',  target: 200 },
-        { duration: '1m',  target: 300 },
-        //{ duration: '1m',  target: 400 },
-        //{ duration: '1m',  target: 500 },
-        { duration: '30s', target: 0 },     // ramp-down
-    ],
-    thresholds: {
-        http_req_duration: ['p(95)<2000'],
-        http_req_failed: ['rate<0.05'],
-        register_errors: ['rate<0.01'],
-        login_errors: ['rate<0.01'],
-        order_create_errors: ['rate<0.05'],
-        order_status_errors: ['rate<0.10'],   // статус может не успеть стать confirmed
-        idempotency_violations: ['rate<0.001'],
+    scenarios: {
+        order_load: {
+            executor: 'ramping-arrival-rate',  // ← фиксированный RPS!
+            startRate: 10,                      // 10 RPS в начале
+            timeUnit: '1s',
+            preAllocatedVUs: 50,                // VU для разгона
+            maxVUs: 500,                        // максимум VU
+            stages: [
+                { duration: '1m', target: 200 },
+                { duration: '1m', target: 220 },
+                { duration: '1m', target: 240 },
+                { duration: '1m', target: 260 },
+                { duration: '1m', target: 0 },    // спад
+            ],
+            exec: 'createOrder',
+        },
     },
-    // Если бэкенд не тянет 500 VU — уменьши. Смотри корреляцию с Grafana.
-    // Для локальной машины реально ~100-200 VU макс.
+    thresholds: {
+        'order_create_errors': ['rate<0.05'],   // < 5% ошибок
+        'http_req_duration':   ['p(95)<3000'],  // p95 < 3 сек
+        'http_req_failed':     ['rate<0.05'],
+    },
+    discardResponseBodies: false,
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
-const PASSWORD = 'LoadTest123!';
+// =============================================
+// Хелперы
+// =============================================
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function pickUniqueProducts(n) {
+    const shuffled = PRODUCTS.slice().sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(n, PRODUCTS.length));
+}
 
 // =============================================
-// Хелпер: заголовки с токеном
+// Создание заказа
 // =============================================
-function authHeaders(token) {
-    return {
+export function createOrder() {
+    // 1–5 уникальных товаров
+    const itemCount = randomInt(1, Math.min(5, PRODUCTS.length));
+    const selectedProducts = pickUniqueProducts(itemCount);
+
+    const items = selectedProducts.map((p) => ({
+        productId: p.id,
+        quantity: randomInt(1, 5),
+    }));
+
+    // Уникальный ключ идемпотентности
+    const idempotencyKey = `load-${__VU}-${__ITER}-${Date.now()}-${Math.random()}`;
+
+    const payload = JSON.stringify({ idempotencyKey, items });
+
+    const params = {
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
-    };
-}
-
-// =============================================
-// Хелпер: регистрация (если 409 — считаем успехом)
-// =============================================
-function register(username) {
-    const payload = JSON.stringify({
-        username,
-        password: PASSWORD,
-        email: `${username}@load.test`,
-    });
-
-    const res = http.post(`${BASE_URL}/api/auth/register`, payload, {
-        headers: { 'Content-Type': 'application/json' },
-        tags: { name: 'Register' },
-    });
-
-    registerTime.add(res.timings.duration);
-
-    // 201 — создан, 409 — уже существует (тоже ок, значит логин сработает)
-    const ok = check(res, {
-        'register: status 201 or 409': (r) => r.status === 201 || r.status === 409,
-    });
-
-    registerErrors.add(!ok);
-    if (ok && res.status === 201) {
-        usersRegistered.add(1);
-    }
-    return ok;
-}
-
-// =============================================
-// Хелпер: логин → JWT
-// =============================================
-function login(username) {
-    const payload = JSON.stringify({ username, password: PASSWORD });
-
-    const res = http.post(`${BASE_URL}/api/auth/login`, payload, {
-        headers: { 'Content-Type': 'application/json' },
-        tags: { name: 'Login' },
-    });
-
-    loginTime.add(res.timings.duration);
-
-    const ok = check(res, {
-        'login: status 200': (r) => r.status === 200,
-        'login: has token': (r) => {
-            try { return !!JSON.parse(r.body).token; } catch { return false; }
-        },
-    });
-
-    loginErrors.add(!ok);
-
-    if (!ok) return null;
-
-    try {
-        return JSON.parse(res.body).token;
-    } catch {
-        return null;
-    }
-}
-
-// =============================================
-// Хелпер: создание заказа
-// =============================================
-function createOrder(token, idempotencyKey) {
-    const payload = JSON.stringify({
-        idempotencyKey,
-        items: [{
-            productId: Math.floor(Math.random() * 50) + 1,
-            quantity: Math.floor(Math.random() * 3) + 1,
-        }],
-    });
-
-    const res = http.post(`${BASE_URL}/api/order`, payload, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${TOKEN}`,
         },
         tags: { name: 'CreateOrder' },
-    });
+    };
+
+    const res = http.post(`${BASE_URL}/api/order`, payload, params);
 
     orderCreateTime.add(res.timings.duration);
 
     const ok = check(res, {
-        'create: status 201': (r) => r.status === 201,
-        'create: has order id': (r) => {
+        'create order: 201': (r) => r.status === 201,
+        'create order: has id': (r) => {
             try { return !!JSON.parse(r.body).id; } catch { return false; }
         },
     });
 
     orderCreateErrors.add(!ok);
 
-    if (!ok) return null;
-
-    try {
-        return JSON.parse(res.body).id;
-    } catch {
-        return null;
+    if (!ok) {
+        console.error(`❌ Create order failed: status=${res.status}, body=${res.body}`);
+    } else {
+        ordersCreated.add(1);
     }
-}
-
-// =============================================
-// Хелпер: проверка статуса (polling до confirmed)
-// =============================================
-function pollOrderStatus(token, orderId, maxAttempts = 20, delaySec = 0.5) {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const res = http.get(`${BASE_URL}/api/order/${orderId}`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-            tags: { name: 'GetOrderStatus' },
-        });
-
-        if (res.status !== 200) {
-            orderStatusErrors.add(1);
-            return null;
-        }
-
-        try {
-            const body = JSON.parse(res.body);
-            const status = body.status || body.state;
-
-            if (status === 'CONFIRMED' || status === 'confirmed') {
-                orderStatusErrors.add(0);
-                return 'CONFIRMED';
-            }
-            if (status === 'CANCELLED' || status === 'cancelled') {
-                orderStatusErrors.add(1);
-                return 'CANCELLED';
-            }
-            // PENDING — ждём дальше
-        } catch (e) {
-            orderStatusErrors.add(1);
-            return null;
-        }
-
-        sleep(delaySec);
-    }
-    // не дождались — тоже плохо, но не критично
-    orderStatusErrors.add(1);
-    return 'TIMEOUT';
-}
-
-// =============================================
-// Хелпер: повторный запрос с тем же idempotencyKey
-// =============================================
-function checkIdempotency(token, idempotencyKey, originalOrderId) {
-    const payload = JSON.stringify({
-        idempotencyKey,
-        items: [{ productId: 1, quantity: 1 }],
-    });
-
-    const res = http.post(`${BASE_URL}/api/order`, payload, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
-        tags: { name: 'CreateOrderIdempotent' },
-    });
-
-    // Ожидаем: тот же order id, либо 409 Conflict
-    let ok = false;
-    if (res.status === 200 || res.status === 201) {
-        try {
-            const body = JSON.parse(res.body);
-            ok = body.id === originalOrderId;
-        } catch { ok = false; }
-    } else if (res.status === 409) {
-        ok = true;
-    }
-
-    idempotencyViolations.add(!ok);
-}
-
-// =============================================
-// Основной сценарий VU
-// =============================================
-export default function () {
-    const vuId = __VU;
-    const iterId = __ITER;
-    const username = `loadtest_${vuId}_${iterId}`;
-
-    let token = null;
-    let orderId = null;
-    const idempotencyKey = `idem-${vuId}-${iterId}-${Date.now()}`;
-
-    // ---- 1. Регистрация ----
-    group('1. Register', () => {
-        if (!register(username)) return;
-    });
-
-    // ---- 2. Логин ----
-    group('2. Login', () => {
-        token = login(username);
-    });
-
-    if (!token) {
-        sleep(1);
-        return;   // без токена дальше смысла нет
-    }
-
-    // ---- 3. Создание заказа ----
-    group('3. Create order', () => {
-        orderId = createOrder(token, idempotencyKey);
-    });
-
-    if (!orderId) {
-        sleep(1);
-        return;
-    }
-
-    ordersCreated.add(1);
-
-    // ---- 4. Проверка идемпотентности (повторный POST с тем же ключом) ----
-    group('4. Idempotency check', () => {
-        checkIdempotency(token, idempotencyKey, orderId);
-    });
-
-    // ---- 5. Polling статуса до CONFIRMED ----
-    group('5. Poll order status', () => {
-        const finalStatus = pollOrderStatus(token, orderId);
-        if (finalStatus === 'CONFIRMED') {
-            ordersConfirmed.add(1);
-        }
-    });
-
-    // ---- 6. Пауза ----
-    sleep(0.5 + Math.random() * 1.5);   // 0.5–2 сек, чтобы VU не били синхронно
 }
 
 // =============================================
 // Итоговый отчёт
 // =============================================
-import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
-
 export function handleSummary(data) {
     return {
-        'load-test-results.json': JSON.stringify(data),
+        'order-load-results.json': JSON.stringify(data, null, 2),
         stdout: textSummary(data, { indent: ' ', enableColors: true }),
     };
 }

@@ -58,3 +58,18 @@ docker compose -f docker-compose.infra.yml -f docker-compose.services.yml up -d 
     - `success = false` → заказ `REJECTED`.
 
 5. **notification-service** читает `order-events` и сохраняет проекцию заказа в свою БД.
+
+
+## Нагрузочное тестирование
+
+**Эндпоинт:** `POST /api/order`  
+**Инструмент:** k6 (`ramping-arrival-rate`)  
+**Результаты:** [Grafana Dashboard Snapshot](https://snapshots.raintank.io/dashboard/snapshot/NBNsmvgg9Yco0vEyKUk4UyemnFPS2xMV)
+
+- **268 RPS** — стабильная работа без деградации.
+- **283 RPS** — начинает расти Kafka Lag у `inventory-service`.
+
+### Воспроизведение
+
+```bash
+k6 run load-test/order-load-test.js
