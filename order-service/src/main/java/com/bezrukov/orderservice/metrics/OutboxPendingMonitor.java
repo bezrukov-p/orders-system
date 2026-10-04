@@ -1,6 +1,6 @@
 package com.bezrukov.orderservice.metrics;
 
-import com.bezrukov.orderservice.reposiroty.OutboxRepository;
+import com.bezrukov.orderservice.repository.OutboxRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

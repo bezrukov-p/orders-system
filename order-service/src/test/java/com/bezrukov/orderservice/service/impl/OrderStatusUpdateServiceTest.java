@@ -5,7 +5,7 @@ import com.bezrukov.common.event.StockReservedEvent;
 import com.bezrukov.orderservice.entity.Order;
 import com.bezrukov.orderservice.entity.Status;
 import com.bezrukov.orderservice.kafka.OrderEventProducer;
-import com.bezrukov.orderservice.reposiroty.OrderRepository;
+import com.bezrukov.orderservice.repository.OrderRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

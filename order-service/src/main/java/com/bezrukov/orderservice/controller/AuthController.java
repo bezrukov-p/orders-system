@@ -44,7 +44,6 @@ public class AuthController implements AuthApi {
     @Override
     @PostMapping("/refreshtoken")
     public ResponseEntity<LoginResponse> refreshToken(@Valid RefreshTokenRequest refreshTokenRequest) {
-        log.info("Refresh token request: {}", refreshTokenRequest.refreshToken());
         return ResponseEntity.ok(authService.refreshToken(refreshTokenRequest.refreshToken()));
     }
 }

@@ -8,7 +8,7 @@ import com.bezrukov.orderservice.entity.Order;
 import com.bezrukov.orderservice.entity.Status;
 import com.bezrukov.orderservice.entity.User;
 import com.bezrukov.orderservice.kafka.OrderCommandProducer;
-import com.bezrukov.orderservice.reposiroty.OrderRepository;
+import com.bezrukov.orderservice.repository.OrderRepository;
 import com.bezrukov.orderservice.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

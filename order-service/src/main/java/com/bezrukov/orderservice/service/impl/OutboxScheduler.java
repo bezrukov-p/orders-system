@@ -5,12 +5,11 @@ import com.bezrukov.orderservice.config.OutboxProperties;
 import com.bezrukov.orderservice.entity.OutboxMessage;
 import com.bezrukov.orderservice.kafka.OrderCommandProducer;
 import com.bezrukov.orderservice.metrics.OutboxMetrics;
-import com.bezrukov.orderservice.reposiroty.OutboxRepository;
+import com.bezrukov.orderservice.repository.OutboxRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Limit;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,8 +61,8 @@ public class OutboxScheduler {
 
         log.info("Outbox processing started: pendingBefore={}", pendingBefore);
 
-        List<OutboxMessage> messages = outboxRepository.findByProcessedFalseAndFailedFalseOrderByCreatedAtAsc(
-                Limit.of(outboxProperties.getBatchSize())
+        List<OutboxMessage> messages = outboxRepository.lockPendingBatch(
+                outboxProperties.getBatchSize()
         );
         if (messages.isEmpty()) {
             return;
@@ -116,7 +115,7 @@ public class OutboxScheduler {
                         "batchSize={}, duration={}ms, rate={}msg/sec",
                 successCount, failureCount, pendingBefore,
                 messages.size(), duration,
-                duration > 0 ? (successCount / (duration * 1000)) : 0
+                duration > 0 ? (successCount / (duration * 1000.0)) : 0
         );
     }
 }

@@ -6,7 +6,7 @@ import com.bezrukov.orderservice.entity.Order;
 import com.bezrukov.orderservice.entity.OrderItem;
 import com.bezrukov.orderservice.entity.Status;
 import com.bezrukov.orderservice.kafka.OrderEventProducer;
-import com.bezrukov.orderservice.reposiroty.OrderRepository;
+import com.bezrukov.orderservice.repository.OrderRepository;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,7 +1,7 @@
 package com.bezrukov.orderservice.service.impl;
 
 import com.bezrukov.orderservice.entity.Role;
-import com.bezrukov.orderservice.reposiroty.RoleRepository;
+import com.bezrukov.orderservice.repository.RoleRepository;
 import com.bezrukov.orderservice.service.RoleService;
 import lombok.AllArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;

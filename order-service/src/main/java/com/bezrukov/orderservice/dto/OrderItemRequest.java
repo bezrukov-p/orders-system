@@ -30,7 +30,8 @@ public class OrderItemRequest {
     @Schema(
             description = "Количество товара",
             example = "2",
-            requiredMode = Schema.RequiredMode.REQUIRED
+            requiredMode = Schema.RequiredMode.REQUIRED,
+            minimum = "1"
     )
     private Long quantity;
 }

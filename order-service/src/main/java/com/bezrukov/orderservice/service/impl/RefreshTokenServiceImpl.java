@@ -2,7 +2,7 @@ package com.bezrukov.orderservice.service.impl;
 
 import com.bezrukov.orderservice.entity.RefreshToken;
 import com.bezrukov.orderservice.entity.User;
-import com.bezrukov.orderservice.reposiroty.RefreshTokenRepository;
+import com.bezrukov.orderservice.repository.RefreshTokenRepository;
 import com.bezrukov.orderservice.service.RefreshTokenService;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.extern.slf4j.Slf4j;

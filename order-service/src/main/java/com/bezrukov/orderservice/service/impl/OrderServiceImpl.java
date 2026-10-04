@@ -6,7 +6,7 @@ import com.bezrukov.orderservice.entity.Order;
 import com.bezrukov.orderservice.entity.Status;
 import com.bezrukov.orderservice.exceptions.OrderAccessDeniedException;
 import com.bezrukov.orderservice.exceptions.OrderNotFoundException;
-import com.bezrukov.orderservice.reposiroty.OrderRepository;
+import com.bezrukov.orderservice.repository.OrderRepository;
 import com.bezrukov.orderservice.service.OrderService;
 import com.bezrukov.orderservice.service.UserService;
 import com.bezrukov.common.dto.OrderItemDto;

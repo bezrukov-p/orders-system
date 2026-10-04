@@ -3,7 +3,7 @@ package com.bezrukov.orderservice.integrations;
 import com.bezrukov.common.dto.OrderItemDto;
 import com.bezrukov.common.event.ReserveStockCommand;
 import com.bezrukov.orderservice.entity.OutboxMessage;
-import com.bezrukov.orderservice.reposiroty.OutboxRepository;
+import com.bezrukov.orderservice.repository.OutboxRepository;
 import com.bezrukov.orderservice.service.impl.OutboxScheduler;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

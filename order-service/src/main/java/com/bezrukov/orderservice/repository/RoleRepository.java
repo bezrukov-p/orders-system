@@ -1,4 +1,4 @@
-package com.bezrukov.orderservice.reposiroty;
+package com.bezrukov.orderservice.repository;
 
 import com.bezrukov.orderservice.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;

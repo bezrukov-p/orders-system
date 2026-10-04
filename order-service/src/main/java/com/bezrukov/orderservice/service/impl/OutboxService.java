@@ -1,7 +1,7 @@
 package com.bezrukov.orderservice.service.impl;
 
 import com.bezrukov.orderservice.entity.OutboxMessage;
-import com.bezrukov.orderservice.reposiroty.OutboxRepository;
+import com.bezrukov.orderservice.repository.OutboxRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

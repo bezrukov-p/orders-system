@@ -4,7 +4,7 @@ import com.bezrukov.orderservice.dto.RegisterRequest;
 import com.bezrukov.orderservice.entity.Role;
 import com.bezrukov.orderservice.entity.User;
 import com.bezrukov.orderservice.exceptions.UsernameAlreadyExistsException;
-import com.bezrukov.orderservice.reposiroty.UserRepository;
+import com.bezrukov.orderservice.repository.UserRepository;
 import com.bezrukov.orderservice.service.ApplicationUserDetailsService;
 import com.bezrukov.orderservice.service.RoleService;
 import com.bezrukov.orderservice.service.UserService;

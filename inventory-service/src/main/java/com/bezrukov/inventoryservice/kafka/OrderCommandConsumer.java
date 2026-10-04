@@ -28,14 +28,16 @@ public class OrderCommandConsumer {
             StockReservedEvent event = stockReservationService.reserveStock(command);
             eventProducer.sendStockReservedEvent(event);
             ack.acknowledge();
-        } catch (ProductNotFoundException e) {
-            log.error("Product not found for orderId={}: {}", command.getOrderId(), e.getMessage(), e);
-            sendFailureEvent(command, e.getMessage());
-            ack.acknowledge();
-        } catch (InsufficientStockException e) {
-            log.warn("Insufficient stock for orderId={}: {}", command.getOrderId(), e.getMessage());
-            sendFailureEvent(command, e.getMessage());
-            ack.acknowledge();
+        } catch (ProductNotFoundException | InsufficientStockException e) {
+            log.warn("Business failure for orderId={}: {}", command.getOrderId(), e.getMessage());
+            try {
+                sendFailureEvent(command, e.getMessage());
+                ack.acknowledge();
+            } catch (Exception sendEx) {
+                log.error("Failed to send failure event, will retry: orderId={}",
+                        command.getOrderId(), sendEx);
+                throw sendEx;
+            }
         } catch (DataIntegrityViolationException e) { // может быть другая ошибка
             log.warn("Duplicate idempotencyKey for orderId={}: {}", command.getOrderId(), e.getMessage());
             ack.acknowledge();
@@ -43,6 +45,8 @@ public class OrderCommandConsumer {
             log.error("Unexpected error for orderId={}, {}", command.getOrderId(), e.getMessage());
             throw e;
         }
+
+
     }
 
     private void sendFailureEvent(ReserveStockCommand command, String errorMessage) {
