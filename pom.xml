@@ -12,7 +12,7 @@
     </parent>
 
     <groupId>com.bezrukov</groupId>
-    <artifactId>microservices-parent</artifactId>
+    <artifactId>orders-system</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
@@ -25,6 +25,9 @@
 
     <modules>
         <module>order-service</module>
+        <module>inventory-service</module>
+        <module>notification-service</module>
+        <module>common</module>
     </modules>
 
     <dependencyManagement>
@@ -45,8 +48,34 @@
         </dependency>
 
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-liquibase</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-kafka</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>3.0.3</version>
         </dependency>
 
         <dependency>
@@ -56,9 +85,59 @@
         </dependency>
     </dependencies>
 
+
+
     <build>
         <pluginManagement>
             <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <excludes>
+                            <exclude>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>default-compile</id>
+                            <phase>compile</phase>
+                            <goals>
+                                <goal>compile</goal>
+                            </goals>
+                            <configuration>
+                                <annotationProcessorPaths>
+                                    <path>
+                                        <groupId>org.projectlombok</groupId>
+                                        <artifactId>lombok</artifactId>
+                                    </path>
+                                </annotationProcessorPaths>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>default-testCompile</id>
+                            <phase>test-compile</phase>
+                            <goals>
+                                <goal>testCompile</goal>
+                            </goals>
+                            <configuration>
+                                <annotationProcessorPaths>
+                                    <path>
+                                        <groupId>org.projectlombok</groupId>
+                                        <artifactId>lombok</artifactId>
+                                    </path>
+                                </annotationProcessorPaths>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>

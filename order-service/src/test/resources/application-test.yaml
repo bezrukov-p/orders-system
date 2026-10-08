@@ -1,0 +1,41 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  liquibase:
+    enabled: true
+
+
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: test-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+app:
+  outbox:
+    batch-size: 100
+    fixed-delay: 5000
+    max-retries: 3
+
+jwt:
+  access:
+    secret: "paJJLVg0HrbiyQVPHCZPcf36CvDc8lekDRLDYP6NIep440LFRzzUWKScvVBspXln"
+
+logging:
+  level:
+    com.bezrukov: DEBUG
+    org.springframework.kafka: WARN
+    org.hibernate.SQL: DEBUG

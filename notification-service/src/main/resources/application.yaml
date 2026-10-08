@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: notification-service
+  liquibase:
+    change-log: classpath:/db/notification/changelog/db.changelog-master-notification.yaml
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-service-group
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      max-poll-records: 500                    # max-poll-records × avg_processing_time < max-poll-interval-ms
+      max-poll-interval-ms: 300000             # 5 мин — макс время обработки
+      session-timeout-ms: 10000
+      heartbeat-interval-ms: 3000
+      fetch-min-size: 1
+      fetch-max-wait: 500
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    listener:
+      observation-enabled: true
+      concurrency: 5
+      ack-mode: MANUAL
+
+admin:
+  apikey: ${ADMIN_API_KEY:admin-key}
+
+server:
+  port: ${SERVER_PORT:8082}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - trace_id=%X{trace_id} span_id=%X{span_id} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        #include: health, info, metrics, prometheus, env, loggers, caches, scheduledtasks
+        include: "*"
